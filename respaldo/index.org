@@ -1,0 +1,1738 @@
+#+PROPERTY: header-args :tangle yes
+#+PROPERTY: header-args: :exports results
+#+OPTIONS: toc:3
+#+TOC: listings           
+
+Documentation and generation file for index.js file, which contains
+all API on the CastorXML Aplication.
+
+* Modules 
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+     const express = require('express')
+     const app = express()
+     const port = 3000
+
+   #+END_SRC
+
+** Access data from the frontend
+   
+   Variables like *req.body*
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+     const bodyParser = require('body-parser')
+     app.use(bodyParser.json({ extended: true }))
+
+   #+END_SRC
+
+** Database related
+   
+   Mysql development database, with an users table.
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+     const mysql = require('mysql')
+     const dbconnection = mysql.createConnection({
+       host: 'localhost',
+       user: 'root',
+       password: 'mysql',
+       database: 'docsri'
+     })
+
+   #+END_SRC
+
+** Mail functionality
+   
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+     const nodemailer = require('nodemailer')
+     const transporter = nodemailer.createTransport({
+       host: 'smtp.elasticemail.com',
+       port: '2525',
+       auth: {
+	 user: '******',
+	 pass: '******'
+       }
+     });
+
+   #+END_SRC
+
+** Token generation
+
+   *secret* is the word used when generating tokens.
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+   const jwt = require('jsonwebtoken')
+   const secret = 'ThisisaTest'
+   
+   #+END_SRC
+
+** Cors
+
+   Basically, allow us the host the API in another Host, and in this
+   case, port.
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+   const cors = require('cors')
+   app.use(cors()) // Enable CORS for express
+
+   #+END_SRC
+   
+** SOAP functionality
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+     const soap = require('soap')
+     const soapURL = 'http://186.4.187.28/InvoiceService/ServiceEb.svc'
+
+   #+END_SRC
+
+** Encription
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+   const bcrypt = require('bcrypt')
+   const saltRounds = 10
+
+   #+END_SRC
+
+** Listening on port
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+   app.listen(port, () => console.log(`Example app listening at localhost:${port}`))
+   #+END_SRC
+
+* Functions
+  
+** Making sure the frontend gives nonblank values
+
+   #+BEGIN_SRC js :results output
+     function paraVal(...args){
+
+       let count = 0;
+       for (i = 0; i < args.length; i++){
+	 if (args[i] != '') {
+	   count += 1;
+	 }
+       }
+       if (count === args.length) {
+	 return true
+       }
+       else { return false }
+     }
+
+   #+END_SRC
+
+* Validations
+  
+  The frontend sends an HTTP Request to the API, which connects to the
+  DB, validates and does any other operations as token generations or
+  encryption, then gives a response.
+  
+  Tokens generated expire at 24 hours.
+
+** Login Users
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+
+     app.post('/users', function (req, response) {
+
+       let nonblank = paraVal(req.body.email, req.body.password)
+
+       if (nonblank) {
+	 dbconnection.query("Select * From users WHERE email = ?",
+			    [req.body.email] ,
+			    function (err, result) {
+
+			      bcrypt.compare(req.body.password, result[0].password, function(error, res) {
+				if(err){
+				  console.log(err);
+				}
+				if(res) {
+				  let token = jwt.sign({ id: req.body.email }, secret, {
+				    expiresIn: 86400 // expires in 24 hours
+				  });
+				  response.status(200).send({ auth: true, token: token });
+				  console.log('Login completado, Token generada')
+				} else {
+				  return response.status(401).send({ auth: false, message: 'No token provided.' });			 
+				}
+			   
+			      })
+			 
+			    })
+       } else {
+	 response.status(401).send({ auth: false, message: 'A parameter is blank'})
+       }
+     })
+
+   #+END_SRC
+
+** Registering Users
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+
+     app.post('/register', function(req, res) {
+
+       let datetime = new Date()
+       let nonblank = paraVal(req.body.username, req.body.email, req.body.password)
+       let mailOptions = {
+	 from: 'info@facilcontabilidad.com',
+	 to: req.body.email,
+	 subject: 'Confirma tu registro a Castor XML',
+	 html: '<p>Hola, te saludamos del <b>Equipo de Facilcontabilidad,</b></p><br/> <p>Para acceder a Castor XML, es necesario confirmar tu registro dando clic en el siguiente enlace: <br/></p> localhost:3001/emailverification/' + token
+
+       }
+
+       bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+
+	 let values = [[req.body.username, req.body.email, hash, datetime, 0, req.body.name]]
+	 let token = jwt.sign({ id: req.body.email }, secret, { expiresIn: 86400 })
+
+	 transporter.sendMail(mailOptions, function(error, info){
+	   if (nonblank) {
+	     dbconnection.query("INSERT INTO users (username, email, password, created, emailVerificated, name) VALUES ?",
+				[values]),
+	     function (errors, result) {
+	       response.status(200).send({ auth: true, token: token });
+	     }
+	     console.log('Email sent: ' + info.response + 'Register ended')
+	   } else {
+	     response.status(401).send({ auth: false, message: 'A parameter is blank'})
+	   }
+	 })
+       })
+     })
+
+   #+END_SRC
+
+*** Email Verification
+
+    #+BEGIN_SRC js :tangle yes :noweb tangle
+
+      app.post('/emailVerification', function(req, res) {
+
+	let token = req.headers['x-access-token']
+	if (!token) return res.status(401).send({ auth: false, message: 'No token provided.' });
+	jwt.verify(token, config.secret, function(err, decoded) {
+	  if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+	  res.status(200).send(decoded);
+	});
+      })
+
+    #+END_SRC
+*** Verificating email, with token 
+
+    #+BEGIN_SRC js :tangle yes :noweb tangle
+
+      app.put('/emailVerification', function(req, res) {
+
+	jwt.verify(req.body.token, secret, function(err, decoded) {
+	  if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
+
+	  dbconnection.query("Select * From users WHERE email = ?",
+			     [req.body.email] ,
+			     function (errors, result) {
+
+			       if (req.body.email === result[0].email && result[0].email === decoded.id) {
+				 dbconnection.query('UPDATE users SET emailVerificated = 1 WHERE email = ?',
+						    [req.body.email],
+						    function(error, results){
+						      console.log('Se ha verificado el mail');
+						    });
+			       }
+			     });
+	});
+      });
+
+    #+END_SRC
+
+** Reset password
+
+   #+BEGIN_SRC js :tangle yes :noweb tangle
+     app.post('/reset', function(req, res) {
+
+       dbconnection.query("Select * From users WHERE email = ?",
+			  [req.body.email] ,
+			  function (err, result) {
+
+			    let token = jwt.sign({ id: req.body.email }, secret, {
+			      expiresIn: 86400 // expires in 24 hours
+			    })
+
+			    let mailOptions = {
+			      from: 'info@facilcontabilidad.com',
+			      to: req.body.email,
+			      subject: 'Sending Email using Node.js',
+			      text: 'For resetting your password, enter this page, and enter your new passwords in the form: localhost:3001/resetpassword/' + token
+			    }
+
+			    transporter.sendMail(mailOptions, function(error, info){
+			      if (error) {
+				console.log(error);
+			      } else {
+				console.log('Email sent: ' + info.response);
+			      }
+			    })
+
+			    if (err) {
+			      console.log('Error: ', err)
+			      res.status(400).json({
+				message: err,
+			      })
+
+			    }
+
+			  })
+
+     })
+
+   #+END_SRC
+
+*** Reset password with token
+
+    #+BEGIN_SRC js :tangle yes :noweb tangle
+
+      app.put('/reset', function (req,res) {
+
+	jwt.verify(req.body.token, secret, function(err, decoded) {
+	  if (err) return res.status(500).send({ auth: false, message: 'Failed to authenticate token.'});
+
+	  bcrypt.hash(req.body.password, saltRounds, function(error, hash) {
+	    dbconnection.query('UPDATE users SET password = ? WHERE email = ?',
+			       [hash, decoded.id],
+			       function(errors, result){
+				 console.log('The password has changed')
+			       })
+	  })
+	})
+      })
+
+    #+END_SRC
+
+* SRI Code
+
+** Validate and send Electronic Bill
+
+   #+BEGIN_SRC js
+
+     app.post('/sriFactura', function (req, response) {
+
+       let factura = {
+	 // FacturaViewModel
+	 invoice: {
+	   identificacionCliente: ["3915"],
+	   secuencial: '001-007-000021802',
+	   fechaEmision: date.toISOString(),
+	   identificacionCliente: "3915",
+	   razon_social_cliente: "9",
+	   correo_cliente: "yrsuarez@gmail.com",
+	   telefono_cliente: null,
+	   direccion_cliente: null,
+	   guiaremision: null,
+	   propina: null,
+	   descuentosolidario: null,
+	   // Datos adicionales
+	   DatosAdicionalesList: {
+	     CampoAdicional: {
+	       nombre: 'D.A.E.',
+	       valor: '642247'
+	     },
+	     CampoAdicional: {
+	       nombre: 'REFERENCIA',
+	       valor: '9659'
+	     },
+ 	     CampoAdicional: {
+	       nombre: 'GUIA MADRE',
+	       valor: '172-35751564'
+	     },
+	     CampoAdicional: {
+	       nombre: 'GUIAS HIJAS',
+	       valor: 'EBF1663682'
+	     }
+	   },
+	   // Product List
+	   ProductList: {
+	     ProductoViewModel: {
+	       cod_producto: "667",
+	       nom_producto: "SPRAY ROSE, ASSORTED",
+	       cantidad: 105,
+	       valor_producto: parseFloat("4"),
+	       descuento_producto: 0,
+	       ProductoImpuestos: { cod_tipo: "2", cod_imp: "0" }
+	     },
+	   },
+	   // Forma de pago
+	   FormaPagoList: {
+	     Plazo: 0,
+	     UnidadTiempo: "DIAS",
+	     Total: parseFloat("420"),
+	     Codigo: "1"
+	   }
+	 },
+	 user: "yrsuarez@gmail.com",
+	 password: "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="
+       }
+
+       soap.createClient(soapURL,
+			 function(err, client) {
+			   client.InsertInvoice(factura, function(err, result) {
+			     console.log(result);
+			   });
+
+			 });
+
+     })
+
+
+   #+END_SRC
+
+** Validating and sending withholdings
+
+   #+BEGIN_SRC js
+
+     let retencion = {
+       // FacturaViewModel
+       retention: {
+	 secuencial: "001-002-000089232",
+	 fechaEmision: new Date(),
+	 identificacionCliente: "1790898431001",
+	 razon_social_cliente: "FRIO Y EXPORTACION S.A FRIOEXPORT",
+	 correo_cliente: "yrsuarez@gmail.com",
+	 telefono_cliente: null,
+	 direccion_cliente: null,
+	 // Datos adicionales
+	 DatosAdicionalesList: {
+	   CampoAdicional: {
+	     nombre: 'EMPRESA',
+	     valor: 'EXPORTADOR HABITUAL DE BIENES'
+	   },
+	 },
+	 // Detalles List
+	 DetalleList: {
+	   DetalleRetencionViewModel: {
+	     cod_producto: "667",
+	     nom_producto: "SPRAY ROSE, ASSORTED",
+	     cantidad: 105,
+	     valor_producto: parseFloat("4"),
+	     descuento_producto: 0,
+	     ProductoImpuestos: { cod_tipo: "2", cod_imp: "0" }
+	   },
+	   DetalleRetencionViewModel: {
+	     BaseImponible: parseFloat("46,76"),
+	     Porcentaje: parceFloat("100"),
+	     Documento: "001-002-000005365",
+	     CodDocumento: "1",
+	     Fecha: new Date(),
+	     CodRetencion: "3",
+	     Codigo: "2"
+	   },
+	 },
+	 // Forma de pago
+	 FormaPagoList: {
+	   Plazo: 0,
+	   UnidadTiempo: "DIAS",
+	   Total: parseFloat("420"),
+	   Codigo: "1"
+	 }
+       },
+       user: "yrsuarez@gmail.com",
+       password: "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="
+     }
+
+     soap.createClient(soapURL,
+		       function(err, client) {
+			 client.InsertRetention(retencion, function(err, result) {
+			   console.log(result);
+			 });
+
+		       });
+
+     })
+
+
+   #+END_SRC
+
+* SRI Information 
+
+  Our API has to be able to connect and send information to the SRI's
+  web services, For this, the frontend will send the data, but the API
+  will have the models of what several requests need to be, since the
+  information sended to the SRI has to be correct.
+
+** DONE Understanding the .net code
+   
+   Creating and sending Electronic Bill, from this .net code, I will
+   create prototypes in javascript, imitating these parameters.
+
+*** First Example
+  :PROPERTIES:
+  :header-args:js: :tangle no
+  :header-args:bash: :tangle no
+  :END:
+
+    This is visual studio .net code, it first creates models for
+    *factura*'s model. This code can be seen in the generated file
+    'example1.js'. Several lists in these examples are made to a
+    prototype, since one can made several new objects from a prototype.
+
+   #+BEGIN_SRC bash
+
+     using (var client = new InvoceServices.ServiceEbClient())
+     {
+       //datos principales
+       var factura = new FacturaViewModel
+       {
+	 secuencial = "001-007-000021802",// documentolegalnumero
+	 fechaEmision = DateTime.Now.AddDays(-3), //documentolegalfechaemision
+	 identificacionCliente = "3915", // documentolegalsncodigo
+	 razon_social_cliente = "9", //documentolegalsnnombremostrado
+	 correo_cliente = "yrsuarez@gmail.com", // documentolegalemail
+	 telefono_cliente = null, //opcional
+	 direccion_cliente = null, //opcional
+	 guiaremision = null, //opcional
+	 propina = null, //opcional
+	 descuentosolidario = null, // opcional
+       };        //lista de productos
+
+   #+END_SRC  
+
+   I wrote the following prototype with the above .net code
+
+     #+BEGIN_SRC js
+
+     function factura(secuencial, fechaEmision, identificacionCliente, razon_social_cliente,
+			correo_cliente, telefono_cliente, direccion_cliente, guiaremision, propina,
+			descuentosolidario) {
+
+	 this.secuencial = "001-007-000021802"; // documentolegalnummero
+	 this.fechaEmision = getDate(); // documentolegalfechaemision
+	 this.identificacionCliente = "3915"; // documentolegalsncodigo
+	 this.razon_social_cliente = "9"; // documentolegalsnnombremostrado
+	 this.correo_cliente = "yrsuarez@gmail.com"; // documentolegalemail
+	 this.telefono_cliente = null;  // opcional
+	 this.direccion_cliente = null; // opcional
+	 this.guiaremision = null; // opcional
+	 this.propina = null; // opcional
+	 this.descuentosolidario = null; // opcional
+       } 
+
+     #+END_SRC
+
+     For the next example, the definition of another model in .net,
+     which, interestingly, converts the model into an array. Here
+     we're precenting the product's model, which is inside a list
+     since there can be several products, in turn, there can be more
+     than one type of tax, since the creation of a List and
+     *ImpuestoModel*:
+
+   #+BEGIN_SRC bash
+
+       var productList = new List<ProductoViewModel> { //Lista de productos a los detalles de la factura
+	 new ProductoViewModel{
+	   cod_producto ="667", // documentolegallineaitemcodigo
+	   nom_producto = "SPRAY ROSE, ASSORTED", // documentolegallineaitemdescrip
+	   cantidad = 105, //documentolegallineacantidad
+	   valor_producto = decimal.Parse("4"), // documentolegallineapreciobruto
+	   descuento_producto = 0, // documentolegallineadescuento
+	   ProductoImpuestos = new List<ImpuestoModel>{
+	     new ImpuestoModel{
+	       cod_tipo= "2", // documentolegallineaimpcod
+	       cod_imp= "0" // documentolegallineaimpcodporc
+	     }
+	   }.ToArray(),
+	 }};
+   
+   #+END_SRC
+
+   I wrote the following code, which doesn't have the convertion to
+   array, but I will add later when needed:
+
+     #+BEGIN_SRC js
+   
+       function Producto(cod_producto, nom_producto, cantidad, valor_producto, descuento_producto
+			    productoImpuestos, cod_tipo, cod_imp) {
+
+	 this.cod_producto = "667"; // documentolegallineaitemcodigo
+	 this.nom_producto = "SPRAY ROSE, ASSORTED"; // documentolegallineaitemdescrip
+	 this.cantidad = 105; // documentolegallineacantidad
+	 this.valor_producto = parseFloat("4"); // documentolegallineapreciobruto
+	 this.descuento_producto = 0; // documentolegallineadescuento
+	 this.Impuestos = {
+	   cod_tipo = "2" // documentolegallineaimpcod
+	   cod_imp = "0" // documentolegallineaimpcodporc
+	 } ;
+
+       }
+
+     #+END_SRC
+
+     In this example, the first line defines a variable
+     *factura.ProductList*, and sets its value to the result of
+     turning productList into an Array. There can be several payment
+     methods, since the need for creating a list.
+
+     #+BEGIN_SRC bash
+
+        factura.ProductList = productList.ToArray();        
+	factura.FormaPagoList = new List<FormaPagoViewModel> { 
+	new FormaPagoViewModel {
+	   Plazo = 0, //DocumentolegalPagoPlazo
+	   UnidadTiempo = "DIAS", // DocumentolegalPagoUnidadTiempo
+	   Total = decimal.Parse("420"), //DocumentolegalPagoTotal
+	   Codigo = "1" // DocumentolegalPagoCodigo
+	 } }.ToArray();        //informacion Adicional
+
+     #+END_SRC
+
+     After the array part, a new module is created, from which I wrote
+     the following code, which will need to be turned into an array later:
+
+     #+BEGIN_SRC js
+
+       function FormaPago(plazo, unidadTiempo, total, codigo) {
+	 this.plazo = 0; // DocumentolegalPagoplazo
+	 this.unidadTiempo = "DIAS"; // DocumentolegalPagoUnidadtiempo
+	 this.total = parseFloat("420"); // DocumentolegalPagototal
+	 this.codigo = "1"; // DocumentolegalPagoCodigo
+       }
+
+     #+END_SRC
+
+     The following is, of course, another variable for *factura*,
+     which is a list of additional data.
+     
+   #+BEGIN_SRC bash
+
+       factura.DatosAdicionalesList = new List<CampoAdicional> {
+	 new CampoAdicional{
+	   nombre = "D.A.E.", //documentolegalinformacionadici.documentolegalinfoadicnombre
+	   valor= "642247" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	 },
+	 new CampoAdicional{
+	   nombre = "REFERENCIA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+	   valor= "9659" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	 },v
+	 new CampoAdicional{
+	   nombre = "GUIA MADRE", //documentolegalinformacionadici.documentolegalinfoadicnombre
+	   valor= "172-35751564" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	 },
+	 new CampoAdicional{
+	   nombre = "GUIAS HIJAS", //documentolegalinformacionadici.documentolegalinfoadicnombre
+	   valor= "EBF1663682" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	 }
+       }.ToArray();
+   
+   #+END_SRC
+   
+   In JS, this is equivalent to:
+
+     #+BEGIN_SRC js
+       // name is: documentolegalinformacionadici.documentolegalinfoadicnombre
+       // value is: documentolegalinformacionadici.documentolegalinfoadicvalor
+
+       function campoadicional(name, value) {
+
+	 nombre = this.name;
+	 valor = this.value;
+       }
+
+       first = new campoadicional("D.A.E.", "642247")
+       second = new campoadicional("REFERENCIA", "9659")
+       third = new campoadicional("GUIA MADRE", "172-35751564")
+       fourth = new campoadicional("GUIAS HIJAS", "EBF1663682")
+     #+END_SRC
+
+**** The Full code:
+
+     #+BEGIN_SRC bash
+
+       using (var client = new InvoceServices.ServiceEbClient())
+       {
+	   //datos principales
+	   var factura = new FacturaViewModel
+	   {
+	       secuencial = "001-007-000021802",// documentolegalnumero
+	       fechaEmision = DateTime.Now.AddDays(-3), //documentolegalfechaemision
+	       identificacionCliente = "3915", // documentolegalsncodigo
+	       razon_social_cliente = "9", //documentolegalsnnombremostrado
+	       correo_cliente = "yrsuarez@gmail.com", // documentolegalemail
+	       telefono_cliente = null, //opcional
+	       direccion_cliente = null, //opcional
+	       guiaremision = null, //opcional
+	       propina = null, //opcional
+	       descuentosolidario = null, // opcional
+	   };        //lista de productos
+	   var productList = new List<ProductoViewModel> { //Lista de productos a los detalles de la factura
+							   new ProductoViewModel{
+							       cod_producto ="667", // documentolegallineaitemcodigo
+							       nom_producto = "SPRAY ROSE, ASSORTED", // documentolegallineaitemdescrip
+							       cantidad = 105, //documentolegallineacantidad
+							       valor_producto = decimal.Parse("4"), // documentolegallineapreciobruto
+							       descuento_producto = 0, // documentolegallineadescuento
+							       ProductoImpuestos = new List<ImpuestoModel>{
+								   new ImpuestoModel{
+								       cod_tipo= "2", // documentolegallineaimpcod
+								       cod_imp= "0" // documentolegallineaimpcodporc
+								   }
+							       }.ToArray(),
+							   }};        factura.ProductList = productList.ToArray();        
+factura.FormaPagoList = new List<FormaPagoViewModel> { new FormaPagoViewModel {
+																						     Codigo = "1" // DocumentolegalPagoCodigo
+																						 } }.ToArray();        //informacion Adicional
+	   factura.DatosAdicionalesList = new List<CampoAdicional> {
+	       new CampoAdicional{
+		   nombre = "D.A.E.", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		   valor= "642247" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	       },
+	       new CampoAdicional{
+		   nombre = "REFERENCIA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		   valor= "9659" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	       },
+	       new CampoAdicional{
+		   nombre = "GUIA MADRE", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		   valor= "172-35751564" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	       },
+	       new CampoAdicional{
+		   nombre = "GUIAS HIJAS", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		   valor= "EBF1663682" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	       }
+	   }.ToArray();
+
+     #+END_SRC
+
+*** Second Example
+  :PROPERTIES:
+  :header-args:js: :tangle no
+  :header-args:bash: :tangle no
+  :END:
+
+  This example focuses on creating and sending withholdings, it's
+  quite similar to the first example, creating the javascript
+  prototypes won't be hard.
+
+  #+BEGIN_SRC bash
+
+  using (var client = new InvoceServices.ServiceEbClient())
+      {
+        //datos principales
+        var retencion = new RetencionViewModel
+        {
+          secuencial = "001-002-000089232",// documentolegalnumero
+          fechaEmision = DateTime.Now, //documentolegalfechaemision
+          identificacionCliente = "1790898431001", // documentolegalsncodigo
+          razon_social_cliente = "FRIO Y EXPORTACION S.A FRIOEXPORT", //documentolegalsnnombremostrado
+          correo_cliente = "yrsuarez@gmail.com", // documentolegalemail
+          telefonoCliente = null, //opcional
+          direccionCliente = null //opcional
+        };
+
+  #+END_SRC
+
+  Create a prototype for a *retencion* in javascript:
+
+  #+BEGIN_SRC js
+
+    function factura(secuencial, fechaEmision, identificacionCliente, razon_social_cliente,
+		     correo_cliente, telefono_cliente, direccion_cliente) {
+
+      this.secuencial = "001-002-000089232"; // documentolegalnumero
+      this.fechaEmision = getDate(); // documentolegalfechaemision
+      this.identificacionCliente = "1790898431001"; // documentolegalsncodigo
+      this.razon_social_cliente = "FRIO Y EXPORTACION S.A FRIOEXPORT"; // documentolegalsnnombremostrado
+      this.correo_cliente = "yrsuarez@gmail.com"; // documentolegalemail
+      this.telefono_cliente = null;  // opcional
+      this.direccion_cliente = null; // opcional
+    } 
+
+
+  #+END_SRC
+
+  This creates list of models for *DetalleRetencion*.
+
+  #+BEGIN_SRC bash
+
+        //lista de detalles
+        var detalleList = new List<DetalleRetencionViewModel> { //detalles de la retencion
+            new DetalleRetencionViewModel{
+              BaseImponible =decimal.Parse("389,69"), // documentolegalretencionbaseimp
+              Porcentaje = decimal.Parse("2,75"), // documentolegalretencionporcent
+              Documento = "001-012-000005366", // documentolegalretnumdocsustent
+              CodDocumento = "1", // documentolegalretcoddocsustent
+              Fecha = DateTime.Now.AddDays(-7), // documentolegalretfecemidocsust
+              CodRetencion = "3440",// documentolegalretencioncodigo
+              Codigo = "1" //documentolegalretcodigo
+            },  
+  
+  #+END_SRC
+
+  The javascript equivalent:
+
+  #+BEGIN_SRC js
+    function detalleRetencion(baseImponible, porcentaje, documento, codDocumento,
+			      fecha, codRetencion, codigo) {
+
+      this.baseImponible = parseFloat("389,69"); // documentolegalretencionbaseimp
+      this.porcentaje = parseFloat("2,75"); // documentolegalretencionporcent
+      this.documento = "001-012-000005366"; // documentolegalretcoddocsustent
+      this.codDocumento = "1"; // documentolegalretfecemidocsust
+      this.fecha = getDate(); // documentolegalretencioncodigo
+      this.retencion = "3440"; // documentolegalretencioncodigo
+      this.codigo = "1"; // documentolegalretcodigo
+    }
+  #+END_SRC
+
+  For this code:
+
+  #+BEGIN_SRC bash
+
+        new DetalleRetencionViewModel{
+              BaseImponible =decimal.Parse("46,76"), // documentolegalretencionbaseimp
+              Porcentaje = decimal.Parse("100"), // documentolegalretencionporcent
+              Documento = "001-012-000005365", // documentolegalretnumdocsustent
+              CodDocumento = "1", // documentolegalretcoddocsustent
+              Fecha = DateTime.Now.AddDays(-7), // documentolegalretfecemidocsust
+              CodRetencion = "3",// documentolegalretencioncodigo
+              Codigo = "2" //documentolegalretcodigo
+            }
+        };        
+	retencion.DetallesList = detalleList.ToArray();  
+  
+  #+END_SRC
+
+  Another javascript prototype, in the above code, this is turned into
+  an array:
+
+  #+BEGIN_SRC js
+    function detalleRetencion(baseImponible, porcentaje, documento, codDocumento,
+			      fecha, codRetencion, codigo) {
+
+      this.baseImponible = parseFloat("46,76"); // documentolegalretencionbaseimp
+      this.porcentaje = parseFloat("100"); // documentolegalretencionporcent
+      this.codDocumento = "1"; // documentolegalretcoddocsustent
+      this.fecha = getDate();
+      this.codRetencion = "3" // documentolegalretencioncodigo
+      this.codigo = "2" // documentolegalretcodigo
+    }
+  #+END_SRC
+
+  Then, a list if made for *Campoadicional*, and turned into an array:
+
+  #+BEGIN_SRC bash
+        //informacion Adicional
+        retencion.DatosAdicionalesList = new List<CampoAdicional> {
+        new CampoAdicional{
+          nombre = "EMPRESA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+          valor= "EXPORTADOR HABITUAL DE BIENES" //documentolegalinformacionadici.documentolegalinfoadicvalor
+        }
+        }.ToArray();  
+  #+END_SRC
+
+  In JS, this is:
+
+  #+BEGIN_SRC js
+    function campoAdicional(name, value) {
+      this.nombre = name;
+      this.valor = value;
+    }
+  #+END_SRC
+
+**** The full code
+
+     #+BEGIN_SRC bash
+
+using (var client = new InvoceServices.ServiceEbClient())
+      {
+        //datos principales
+        var retencion = new RetencionViewModel
+        {
+          secuencial = "001-002-000089232",// documentolegalnumero
+          fechaEmision = DateTime.Now, //documentolegalfechaemision
+          identificacionCliente = "1790898431001", // documentolegalsncodigo
+          razon_social_cliente = "FRIO Y EXPORTACION S.A FRIOEXPORT", //documentolegalsnnombremostrado
+          correo_cliente = "yrsuarez@gmail.com", // documentolegalemail
+          telefonoCliente = null, //opcional
+          direccionCliente = null //opcional
+        };        //lista de detalles
+        var detalleList = new List<DetalleRetencionViewModel> { //detalles de la retencion
+            new DetalleRetencionViewModel{
+              BaseImponible =decimal.Parse("389,69"), // documentolegalretencionbaseimp
+              Porcentaje = decimal.Parse("2,75"), // documentolegalretencionporcent
+              Documento = "001-012-000005366", // documentolegalretnumdocsustent
+              CodDocumento = "1", // documentolegalretcoddocsustent
+              Fecha = DateTime.Now.AddDays(-7), // documentolegalretfecemidocsust
+              CodRetencion = "3440",// documentolegalretencioncodigo
+              Codigo = "1" //documentolegalretcodigo
+            },
+            new DetalleRetencionViewModel{
+              BaseImponible =decimal.Parse("46,76"), // documentolegalretencionbaseimp
+              Porcentaje = decimal.Parse("100"), // documentolegalretencionporcent
+              Documento = "001-012-000005365", // documentolegalretnumdocsustent
+              CodDocumento = "1", // documentolegalretcoddocsustent
+              Fecha = DateTime.Now.AddDays(-7), // documentolegalretfecemidocsust
+              CodRetencion = "3",// documentolegalretencioncodigo
+              Codigo = "2" //documentolegalretcodigo
+            }
+        };        retencion.DetallesList = detalleList.ToArray();        //informacion Adicional
+        retencion.DatosAdicionalesList = new List<CampoAdicional> {
+        new CampoAdicional{
+          nombre = "EMPRESA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+          valor= "EXPORTADOR HABITUAL DE BIENES" //documentolegalinformacionadici.documentolegalinfoadicvalor
+        }
+        }.ToArray();     
+     
+     #+END_SRC
+
+*** Third Example
+  :PROPERTIES:
+  :header-args:js: :tangle no
+  :header-args:bash: :tangle no
+  :END:
+
+  This example focuses into purchase assetlement, and again, it
+  creates a bunch of models, or clases, or in this case, JS
+  prototypes. Since we're using the same method on creating
+  prototypes, I'll use the full code in this example:
+
+     #+BEGIN_SRC bash
+     
+using (var client = new InvoceServices.ServiceEbClient())
+      {
+        //datos principales
+        var liquidacion = new LiquidacionCompraViewModel
+        {
+          secuencial = "001-002-000028521",// documentolegalnumero
+          fechaEmisionArg = DateTime.Now.AddDays(-3), //documentolegalfechaemision
+          identificacionProveedorArg = "809317357B01", // documentolegalsncodigo
+          razonSocialCompradorArg = "ESMERALDA BREEDING BV.", //documentolegalsnnombremostrado
+          correo_proveedor = "yrsuarez@gmail.com" // documentolegalemail
+        };        
+	//lista de productos
+        var productList = new List<ProductoViewModel> { //Lista de productos correspondientes al destinatario
+            new ProductoViewModel{
+             cod_producto ="1", // documentolegallineaitemcodigo
+             nom_producto = "REGALIAS 4TO TRIMESTRE AÑO 2019", // documentolegallineaitemdescrip
+             cantidad = 1, //documentolegallineacantidad
+             precioSinsubsidio = decimal.Parse("18916.71"), // documentolegallineapreciobruto
+             valor_producto = decimal.Parse("18916.71"), // documentolegallineaprecio
+             descuento_producto = 0, // documentolegallineadescuento
+             ProductoImpuestos = new List<ImpuestoModel>{
+               new ImpuestoModel{
+               cod_tipo= "2", // documentolegallineaimpcod
+               cod_imp= "2" // documentolegallineaimpcodporc
+             }
+            }.ToArray(),
+          }};        
+	  liquidacion.ProductList = productList.ToArray();        
+	  liquidacion.FormaPagoList = new List<FormaPagoViewModel> { 
+	  new FormaPagoViewModel {
+          Plazo = 15, //DocumentolegalPagoPlazo
+          UnidadTiempo = "DIAS", // DocumentolegalPagoUnidadTiempo
+          Total = decimal.Parse("21186.72"), //DocumentolegalPagoTotal
+          Codigo = "20" // DocumentolegalPagoCodigo
+        } }.ToArray();        
+	//informacion Adicional
+        liquidacion.DatosAdicionalesList = new List<CampoAdicional> {
+        new CampoAdicional{
+          nombre = "FINCA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+          valor= "GENEVIV" //documentolegalinformacionadici.documentolegalinfoadicvalor
+        }
+        }.ToArray();     
+
+     #+END_SRC
+
+     The JS equivalent would be:
+
+     #+BEGIN_SRC js
+
+       function liquidacionCompra(secuencial, fechaEmisionArg, identificaicionProovedorArg,
+				  razonSocialCompradorArg, correo_proveedor) {
+	 this.secuencial = "001-002-000028521"; // documentolegalnumero
+	 this.fechaEmisionArg = get.Date(); // documentolegalfechaemision
+	 this.identificaicionProovedorArg = "809317357B01"; // documentolegalsncodigo
+	 this.razonSocialCompradorArg = "ESMERALDA BREEDING BV."; // documentolegalsnnombremostrado
+	 this.correo_proveedor = "yrsuarez@gmail.com"; // documentolegalemail
+       }
+
+       // Later turned into an array
+       function productoLiquidacion(codProducto, nomProducto, cantidad, precioSinSubsidio,
+				    valorProducto, descuentoProducto, productoImpuestos) {
+	 this.codProducto = "1"; // documentolegallineaitemcodigo
+	 this.nomProducto = "REGALIAS 4TO TRIMESTRE AÑO 2019"; // documentolegallineaitemdescrip
+	 this.cantidad = 1; // documentolegallineacantidad
+	 this.precioSinSubsidio = parseFloat("18916.71"); // documentolegallineapreciobruto
+	 this.valorProducto = parseFloat("18916.71"); // documentolegallineaprecio
+	 this.descuentoProducto = 0; // documentolegallineadescuento
+	 this.productoImpuestos = {
+	   codTipo = "2"; // documentolegallineaimpcod
+	   codImp = "2";  // documentolegallineaimpcodporc
+	 };
+       }
+
+       function formaPagoLiquidacion(plazo, unidadTiempo, total, codigo) {
+
+	 this.plazo = 15; // DocumentolegalPagoplazo
+	 this.unidadTiempo = "DIAS"; // DocumentolegalPagoUnidadTiempo
+	 this.total = parseFloat("21186.72"); // DocumentolegalPagoTotal
+	 this.codigo = "20" // documentolegalpagocodigo
+       }
+
+       // Later turned into an array:
+       function datosAdicionalesLiquidacion(name, value) {
+
+	 this.nombre = name; // documentolegalinformacionadici.documentolegalinfoadicnombre
+	 this.valor = value; // documentolegalinformacionadici.documentolegalinfoadicvalor
+       }
+
+     #+END_SRC
+
+*** Fourth Example
+  :PROPERTIES:
+  :header-args:js: :tangle no
+  :header-args:bash: :tangle no
+  :END:
+
+    Focuses in Referral Guide, the full code is:
+
+    #+BEGIN_SRC bash
+
+using (var client = new InvoceServices.ServiceEbClient())
+      {
+        //datos principales
+        var guiaremision = new GuiaRemisionViewModel
+        {
+          secuencial = "001-002-000028530",// documentolegalnumero
+          dir_partida = "LA MORA",// documentolegaldireccionpartida
+          dir_establecimiento = "AV. INTEROCEÁNICA S/N Y CALLE SIENA",//documentolegaldireccionestab
+          fechaEmision = new DateTime(2020, 4, 26),//documentolegalfechaemision
+          fecha_inicio = new DateTime(2020, 4, 26),// documentolegalfechainitransp
+          fecha_fin = new DateTime(2020, 4, 26).AddDays(2),//documentolegalfechafintransp
+        };        
+	//Transportista
+        guiaremision.Transportista = new Transportista
+        {
+          identificacion_transportista = "1711308294", //documentolegalsncodigo,
+          razon_social_transportista = "VASQUEZ RIOS JOSE FRANCISCO",//documentolegalsnnombremostrado
+          correo_transportista = "",//opcional
+          placa = "CBG-0923" // documentolegalplaca
+        };        
+	//detalles de la guia
+        var detallesguia = new List<DetalleGuiaViewModel>();        detallesguia.Add(new DetalleGuiaViewModel
+        {
+          identificacion_destinatario = "1791807820001", // DocumentoLegalDestIndent
+          nombre_destinatario = "SERVIPALLET", //DocumentoLegalDestRazonSocial
+          correos_destinatario = "yrsuarez@mail.com",//documentolegalemail
+          dir_destino = "TABABELA SERVI PALET", //DocumentoLegalDestDireccion,
+          motivo = "EXPORTACION", //DocumentoLegalDestMotTranslado
+          ProductList = new List<ProductoViewModel> { //Lista de productos correspondientes al destinatario
+            new ProductoViewModel{
+             cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+             nom_producto = "369-7744-5233 MIA LA MORA", //DocumentoLegalDestDetDescrip
+             cantidad = 430 //DocumentoLegalDestDetCantidad
+            },
+            new ProductoViewModel{
+             cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+             nom_producto = "369-7744-5233  MIA ESM SUN", //DocumentoLegalDestDetDescrip
+             cantidad = 215 //DocumentoLegalDestDetCantidad
+            },
+            new ProductoViewModel{
+             cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+             nom_producto = "729-6337-9864 MIA ESM SUN", //DocumentoLegalDestDetDescrip
+             cantidad = 35 //DocumentoLegalDestDetCantidad
+            },
+            new ProductoViewModel{
+             cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+             nom_producto = "729-6337-9864 MIA LA MORA", //DocumentoLegalDestDetDescrip
+             cantidad = 1290 //DocumentoLegalDestDetCantidad
+            }
+          }.ToArray()
+        });        
+	guiaremision.DetallestList = detallesguia.ToArray();        //informacion Adicional
+        guiaremision.DatosAdicionalesList = new List<CampoAdicional> {
+        new CampoAdicional{
+          nombre = "SELLO", //documentolegalinformacionadici.documentolegalinfoadicnombre
+          valor= "3390EJJ - 3389EJJ" //documentolegalinformacionadici.documentolegalinfoadicvalor
+        }
+        }.ToArray();
+    
+    #+END_SRC
+
+    In JS, this will be:
+
+    #+BEGIN_SRC js
+
+      function guiaRemision(secuencial, dirPartida, dirEstablecimiento,
+			    fechaEmision, fechaInicio, fechaFin) {
+
+	this.secuencial = "001-002-000028530"; // documentolegalnumero
+	this.dirPartida = "LA MORA"; // documentolegaldireccionpartida
+	this.dirEstablecimiento = "AV. INTEROCEÁNICA S/N Y CALLE SIENA"; // documentolegaldireccionestab
+	this.fechaEmision = get.Date(); // documentolegalfechaemision
+	this.fechaInicio = get.Date(); // documentolegalfechainitransp
+	this.fechaFin = get.Date(); // Add 2 days here, documentolegalfechafintransp
+      }
+
+      function transportista(identificacionTransportista, razonSocialTransportista, correoTransportista,
+			     placa) {
+
+	this.identificacionTransportista = "1711308294"; // documentolegalsncodigo
+	this.razonSocialTransportista = "VASQUEZ RIOS JOSE FRANCISCO"; // documentolegalsnnombremostrado
+	this.correoTransportista = "" // opcional
+	this.placa = "CBG-0923" // documentolegalplaca
+      }
+
+      // This is latter made into an array, and there can be more than one product
+
+      function detallesGuia(identificacionDestinatario, nombreDestinatario,
+			    correosDestinatario, dirDestino, motivo, producto) {
+
+	this.identificacionDestinatario = "1791807820001"; // DocumentoLegalDestIndent
+	this.nombreDestinatario = "SERVIPALLET"; // Documentolegaldestrazonsocial
+	this.correosDestinatario = "yrsuarez@gmail.com"; // documentolegalemail
+	this.dirDestino = "TABABELA SERVI PALET"; // DocumentoLegalDestDireccion
+	this.motivo = "EXPORTACION"; // Documentolegaldestmottranslado
+	this.producto = {
+	  cod_producto = "CAJAS"; // Documentolegaldestdetcodigo
+	  nom_producto = "369-7744-5233 MIA LA MORA"; // Documentolegaldestdetdescrip
+	  cantidad = 430; // Documentolegaldestdetcantidad
+	}
+  
+      }
+
+      // A list of additional details
+
+      function campoAdicionalRemision(nombre, valor) {
+
+	this.nombre = "SELLO"; // documentolegalinformacionadici.documentolegalinfoadicnombre
+	this.valor = "3390ejj - 3389ejj"; // Documentolegalinformacionadici.documentolegalinfoadicvalor
+      }
+
+    #+END_SRC
+    
+*** Fifth Example
+
+    This example focuses on debit note, the net code is:
+
+    #+BEGIN_SRC bash
+	    using (var client = new InvoceServices.ServiceEbClient())
+	    {
+		//datos principales
+		var nd = new NotaDebitoViewModel
+		{
+		    secuencial = "001-002-000021804",// documentolegalnumero
+		    fechaEmision = DateTime.Now, //documentolegalfechaemision
+		    identificacionCliente = "1756727507", // documentolegalsncodigo
+		    razon_social_cliente = "Yoel Rivera", //documentolegalsnnombremostrado
+		    correo_cliente = "yrsuarez@gmail.com",
+		    telefonoCliente = "0979352282",// opcional
+		    direccionCliente = "Telegrafo Primero N55-55",// opcional
+		    num_doc_modif = "001-001-000000012",
+		    cod_doc_modif = "01",
+		    fecha_doc_modif = DateTime.Now,
+		    descuentosolidario = null, // opcional
+		};               //Lista de los detalles de la nota de debito
+		var detalleList = new List<NotaDebitoDetalleViewModel> {
+		    new NotaDebitoDetalleViewModel{
+			Razon = "Interes por mora", // documentolegallineaitemcodigo
+			Valor = decimal.Parse("100"), // documentolegallineapreciobruto
+			ImpuestoNotaDebito = new List<ImpuestoModel>{
+			    new ImpuestoModel{
+				cod_tipo= "2", // documentolegallineaimpcod
+				cod_imp= "2" // documentolegallineaimpcodporc
+			    }
+			}.ToArray(),
+		    }};               nd.DetalleList = detalleList.ToArray();               nd.FormaPagoList = 
+		new List<FormaPagoViewModel> { new FormaPagoViewModel {
+						   Plazo = 0, //DocumentolegalPagoPlazo
+						   UnidadTiempo = "DIAS", // DocumentolegalPagoUnidadTiempo
+						   Total = decimal.Parse("112"), //DocumentolegalPagoTotal
+						   Codigo = "1" // DocumentolegalPagoCodigo
+					       } }.ToArray();               //informacion Adicional
+		nd.DatosAdicionalesList = new List<CampoAdicional> {
+		    new CampoAdicional{
+			nombre = "D.A.E.", //documentolegalinformacionadici.documentolegalinfoadicnombre
+			valor= "642247" //documentolegalinformacionadici.documentolegalinfoadicvalor
+		    },
+		    new CampoAdicional{
+			nombre = "REFERENCIA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+			valor= "9659" //documentolegalinformacionadici.documentolegalinfoadicvalor
+		    },
+		    new CampoAdicional{
+			nombre = "GUIA MADRE", //documentolegalinformacionadici.documentolegalinfoadicnombre
+			valor= "172-35751564" //documentolegalinformacionadici.documentolegalinfoadicvalor
+		    },
+		    new CampoAdicional{
+			nombre = "GUIAS HIJAS", //documentolegalinformacionadici.documentolegalinfoadicnombre
+			valor= "EBF1663682" //documentolegalinformacionadici.documentolegalinfoadicvalor
+		    }
+		}.ToArray();               var result = client.InsertDebitNote(nd, "yrsuarez@gmail.com", "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw==");
+		MessageBox.Show((result.Sucessful) ? "OK" : result.data);
+	    }
+    #+END_SRC
+
+    The equivalent JS code is:
+
+    #+BEGIN_SRC js
+      let debitNote = {
+	// FacturaViewModel
+	debitNote: {
+	  identificacionCliente: "1756727507",
+	  secuencial: '001-002-000021804',
+	  fechaEmision: date.toISOString(),
+	  razon_social_cliente: "Yoel Rivera",
+	  correo_cliente: "yrsuarez@gmail.com",
+	  telefono_cliente: "0979352282",
+	  direccion_cliente: "Telegrafo Primero N55-55",
+	  num_doc_modif: "001-001-000000012",
+	  cod_doc_modif: "01",
+	  fecha_doc_modif: date.toISOString(),
+	  descuentosolidario: null,
+	  // Nota de Debito Detalle
+	  DetalleList: {
+	    NotaDebitoDetalleViewModel: {
+	      Razon: "Interes por mora",
+	      Valor: parseFloat("100"),
+	      ImpuestoNotaDebito: {
+		ImpuestoModel: {
+		  cod_tipo: "2",
+		  cod_imp: "2"
+		}
+	      }
+	    }
+	  }
+	  // Datos adicionales
+	  DatosAdicionalesList: {
+	    CampoAdicional: {
+	      nombre: 'D.A.E.',
+	      valor: '642247'
+	    },
+	    CampoAdicional: {
+	      nombre: 'REFERENCIA',
+	      valor: '9659'
+	    },
+	    CampoAdicional: {
+	      nombre: 'GUIA MADRE',
+	      valor: '172-35751564'
+	    },
+	    CampoAdicional: {
+	      nombre: 'GUIAS HIJAS',
+	      valor: 'EBF1663682'
+	    }
+	  },
+	  // Product List
+	  ProductList: {
+	    ProductoViewModel: {
+	      cod_producto: "667",
+	      nom_producto: "SPRAY ROSE, ASSORTED",
+	      cantidad: 105,
+	      valor_producto: parseFloat("4"),
+	      descuento_producto: 0,
+	      ProductoImpuestos: { cod_tipo: "2", cod_imp: "0" }
+	    },
+	  },
+	  // Forma de pago
+	  FormaPagoList: {
+	    FormaPagoViewModel{
+	      Plazo: 0,
+	      UnidadTiempo: "DIAS",
+	      Total: parseFloat("112"),
+	      Codigo: "1"
+	    },
+	  },
+	},
+	user: "yrsuarez@gmail.com",
+	password: "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="
+      }
+
+      soap.createClient(soapURL,
+			function(err, client) {
+			  client.InsertDebitNote(debitNote, function(err, result) {
+			    console.log(result);
+			  });
+
+			});
+
+    #+END_SRC
+
+*** Sixth Example
+
+    Credit note, the net code is:
+
+    #+BEGIN_SRC bash
+      using (var client = new InvoceServices.ServiceEbClient())
+      {
+	  //datos principales
+	  var nc = new NotaCreditoViewModel
+	  {
+	      secuencial = "001-002-000021215",// documentolegalnumero
+	      fechaEmision = DateTime.Now, //documentolegalfechaemision
+	      identificacionCliente = "1756727507", // documentolegalsncodigo
+	      razon_social_cliente = "Yoel Rivera", //documentolegalsnnombremostrado
+	      correo_cliente = "yrsuarez@gmail.com",
+	      telefonoCliente = "0979352282",// opcional
+	      direccionCliente = "Telegrafo Primero N55-55",// opcional
+	      num_doc_modif = "001-001-000000012",
+	      cod_doc_modif = "01",
+	      fecha_doc_modif = DateTime.Now,
+	      Motivo = "Devolucion"
+	  };               //lista de productos
+	  var productList =
+	  new List<ProductoViewModel> { //Lista de productos a los detalles de la factura
+					new ProductoViewModel{
+					    cod_producto ="787", // documentolegallineaitemcodigo
+					    cod_aux_producto = "PP787",
+					    nom_producto = "SPRAY ROSE, ASSORTED", // documentolegallineaitemdescrip
+					    cantidad = 105, //documentolegallineacantidad
+					    valor_producto = decimal.Parse("4"), // documentolegallineapreciobruto
+					    tipo_producto = "BIEN",
+					    descuento_producto = 0, // documentolegallineadescuento
+					    ProductoImpuestos = new List<ImpuestoModel>{
+						new ImpuestoModel{
+						    cod_tipo= "2", // documentolegallineaimpcod
+						    cod_imp= "0" // documentolegallineaimpcodporc
+						}
+					    }.ToArray(),
+					}};
+	  nc.ProductList = productList.ToArray();               //informacion Adicional
+	  nc.DatosAdicionalesList =
+	  new List<CampoAdicional> {
+	      new CampoAdicional{
+		  nombre = "D.A.E.", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		  valor= "642247" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	      },
+	      new CampoAdicional{
+		  nombre = "REFERENCIA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		  valor= "9659" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	      }
+	  }.ToArray();
+
+	  var result = client.InsertCreditNote(nc, "yrsuarez@gmail.com", "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw==");
+	  MessageBox.Show((result.Sucessful) ? "OK" : result.data);
+      }
+    #+END_SRC
+
+    The equivalent JS code is:
+
+
+    #+BEGIN_SRC js
+      let creditNote = {
+	// FacturaViewModel
+	creditNote: {
+	  secuencial: "001-002-000021215",// documentolegalnumero
+	  fechaEmision: DateTime.Now, //documentolegalfechaemision
+	  identificacionCliente: "1756727507", // documentolegalsncodigo
+	  razon_social_cliente: "Yoel Rivera", //documentolegalsnnombremostrado
+	  correo_cliente: "yrsuarez@gmail.com",
+	  telefonoCliente: "0979352282",// opcional
+	  direccionCliente: "Telegrafo Primero N55-55",// opcional
+	  num_doc_modif: "001-001-000000012",
+	  cod_doc_modif: "01",
+	  fecha_doc_modif: DateTime.Now,
+	  Motivo: "Devolucion"
+	  // Nota de Credito Detalle
+	  DetalleList: {
+	    NotaDebitoDetalleViewModel: {
+	      Razon: "Interes por mora",
+	      Valor: parseFloat("100"),
+	      ImpuestoNotaDebito: {
+		ImpuestoModel: {
+		  cod_tipo: "2",
+		  cod_imp: "2"
+		}
+	      }
+	    }
+	  }
+	  // Datos adicionales
+	  DatosAdicionalesList: {
+	    CampoAdicional: {
+	      nombre: 'D.A.E.',
+	      valor: '642247'
+	    },
+	    CampoAdicional: {
+	      nombre: 'REFERENCIA',
+	      valor: '9659'
+	    },
+	  },
+	  // Product List
+	  ProductList: {
+	    ProductoViewModel: {
+	      cod_producto: "787", // documentolegallineaitemcodigo
+	      cod_aux_producto: "PP787",
+	      nom_producto: "SPRAY ROSE, ASSORTED", // documentolegallineaitemdescrip
+	      cantidad: 105, //documentolegallineacantidad
+	      valor_producto: parseFloat("4"), // documentolegallineapreciobruto
+	      tipo_producto: "BIEN",
+	      descuento_producto: 0, // documentolegallineadescuento
+	      ProductoImpuestos: { cod_tipo: "2", cod_imp: "0" }
+	    },
+	  },
+	},
+	user: "yrsuarez@gmail.com",
+	password: "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="
+      }
+
+      soap.createClient(soapURL,
+			function(err, client) {
+			  client.InsertCreditNote(debitNote, function(err, result) {
+			    console.log(result);
+			  });
+
+			});
+
+    #+END_SRC
+
+*** Referral Guide 
+
+    For this example, the .net code is:
+
+    #+BEGIN_SRC bash
+
+      using (var client = new InvoceServices.ServiceEbClient())
+      {
+	  //datos principales
+	  var guiaremision = new GuiaRemisionViewModel
+	  {
+	      secuencial = "001-002-000028530",// documentolegalnumero
+	      dir_partida = "LA MORA",// documentolegaldireccionpartida
+	      dir_establecimiento = "AV. INTEROCEÁNICA S/N Y CALLE SIENA",//documentolegaldireccionestab
+	      fechaEmision = new DateTime(2020, 4, 26),//documentolegalfechaemision
+	      fecha_inicio = new DateTime(2020, 4, 26),// documentolegalfechainitransp
+	      fecha_fin = new DateTime(2020, 4, 26).AddDays(2),//documentolegalfechafintransp
+	  };               //Transportista
+	  guiaremision.Transportista = new Transportista
+	  {
+	      identificacion_transportista = "1711308294", //documentolegalsncodigo,
+	      razon_social_transportista = "VASQUEZ RIOS JOSE FRANCISCO",//documentolegalsnnombremostrado
+	      correo_transportista = "",//opcional
+	      placa = "CBG-0923" // documentolegalplaca
+	  };               //detalles de la guia
+	  var detallesguia =
+	  new List<DetalleGuiaViewModel>();
+	  detallesguia.Add(new DetalleGuiaViewModel
+			   {
+			       identificacion_destinatario = "1791807820001", // DocumentoLegalDestIndent
+			       nombre_destinatario = "SERVIPALLET", //DocumentoLegalDestRazonSocial
+			       correos_destinatario = "yrsuarez@mail.com",//documentolegalemail
+			       dir_destino = "TABABELA SERVI PALET", //DocumentoLegalDestDireccion,
+			       motivo = "EXPORTACION", //DocumentoLegalDestMotTranslado
+			       ProductList =
+			       new List<ProductoViewModel> { //Lista de productos correspondientes al destinatario
+							     new ProductoViewModel{
+								 cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+								 nom_producto = "369-7744-5233  MIA  LA  MORA", //DocumentoLegalDestDetDescrip
+								 cantidad = 430 //DocumentoLegalDestDetCantidad
+							     },
+							     new ProductoViewModel{
+								 cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+								 nom_producto = "369-7744-5233   MIA  ESM SUN", //DocumentoLegalDestDetDescrip
+								 cantidad = 215 //DocumentoLegalDestDetCantidad
+							     },
+							     new ProductoViewModel{
+								 cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+								 nom_producto = "729-6337-9864  MIA  ESM  SUN", //DocumentoLegalDestDetDescrip
+								 cantidad = 35 //DocumentoLegalDestDetCantidad
+							     },
+							     new ProductoViewModel{
+								 cod_producto ="CAJAS", //DocumentoLegalDestDetCodigo
+								 nom_producto = "729-6337-9864 MIA  LA  MORA", //DocumentoLegalDestDetDescrip
+								 cantidad = 1290 //DocumentoLegalDestDetCantidad
+							     }
+							   }.ToArray()
+			   });
+	  guiaremision.DetallestList = detallesguia.ToArray();               //informacion Adicional
+	  guiaremision.DatosAdicionalesList = new List<CampoAdicional> {
+	      new CampoAdicional{
+		  nombre = "SELLO", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		  valor= "3390EJJ - 3389EJJ" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	      }
+	  }.ToArray();
+	  var result = client.InsertGuide(guiaremision, "yrsuarez@gmail.com", "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw==");
+	  MessageBox.Show((result.Sucessful)?"OK":result.data);
+      }
+    #+END_SRC
+
+    For this, the equivalent JS code is:
+
+    #+BEGIN_SRC js
+      let guide = {
+	// FacturaViewModel
+	guide: {
+	  secuencial: "001-002-000028530",
+	  dir_partida: "LA MORA",
+	  dir_establecimiento: "AV. INTEROCEÁNICA S/N Y CALLE SIENA",
+	  fechaEmision: date.toISOString(),
+	  fecha_inicio: date.toISOString(),
+	  fecha_fin: date.toISOString(), // Add two days
+	  // Transportista
+	  Transportista: {
+	    identificacion_transportista: "1711308294", 
+	    razon_social_transportista: "VASQUEZ RIOS JOSE FRANCISCO",
+	    correo_transportista: "",
+	    placa: "CBG-0923" 
+	  }
+
+	  // Nota de Credito Detalle
+	  DetallesList: {
+	    DetalleGuiaViewModel: {
+	      identificacion_destinatario: "1791807820001", 
+	      nombre_destinatario: "SERVIPALLET", 
+	      correos_destinatario: "yrsuarez@mail.com",
+	      dir_destino: "TABABELA SERVI PALET", 
+	      motivo: "EXPORTACION", 
+
+	      // Product List
+	      ProductList: {
+		ProductoViewModel: {
+		  cod_producto: "CAJAS", 
+		  nom_producto: "369-7744-5233  MIA  LA  MORA", 
+		  cantidad: 430 
+		},
+	      },
+	      productoViewModel: {
+		cod_producto: "CAJAS", 
+		nom_producto: "369-7744-5233   MIA  ESM SUN", 
+		cantidad: 215 
+	      }
+	      productoViewModel: {
+		cod_producto: "CAJAS", 
+		nom_producto: "729-6337-9864  MIA  ESM  SUN", 
+		cantidad: 35 
+	      }
+	      productoViewModel: {
+		cod_producto: "CAJAS", 
+		nom_producto: "729-6337-9864 MIA  LA  MORA", 
+		cantidad: 1290 
+	      }
+	    }
+	  }
+	}
+	// Datos adicionales
+	DatosAdicionalesList: {
+	  CampoAdicional: {
+	    nombre: 'SELLO',
+	    valor: "3390EJJ - 3389EJJ" 
+	  },
+	},
+      },
+	  user: "yrsuarez@gmail.com",
+	  password: "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="
+      }
+
+      soap.createClient(soapURL,
+			function(err, client) {
+			  client.InsertGuide(guide, function(err, result) {
+			    console.log(result);
+			  });
+
+			});
+
+    #+END_SRC
+
+*** Hilsea Purchase Assetlement
+
+    The net code for this example is:
+
+    #+BEGIN_SRC bash
+      using (var client = new InvoceServices.ServiceEbClient())
+      {
+	  //datos principales
+	  var liquidacion = new LiquidacionCompraViewModel
+	  {
+	      secuencial = "001-002-000028521",// documentolegalnumero
+	      fechaEmisionArg = DateTime.Now.AddDays(-3), //documentolegalfechaemision
+	      identificacionProveedorArg = "809317357B01", // documentolegalsncodigo
+	      razonSocialCompradorArg = "ESMERALDA BREEDING BV.", //documentolegalsnnombremostrado
+	      correo_proveedor = "yrsuarez@gmail.com" // documentolegalemail
+	  };               //lista de productos
+	  var productList =
+	  new List<ProductoViewModel> { //Lista de productos correspondientes al destinatario
+					new ProductoViewModel{
+					    cod_producto ="1", // documentolegallineaitemcodigo
+					    nom_producto = "REGALIAS 4TO TRIMESTRE AÑO 2019", // documentolegallineaitemdescrip
+					    cantidad = 1, //documentolegallineacantidad
+					    tipo_producto = "BIEN",
+					    precioSinsubsidio = decimal.Parse("18916.71"), // documentolegallineapreciobruto
+					    valor_producto = decimal.Parse("18916.71"), // documentolegallineaprecio
+					    descuento_producto = 0, // documentolegallineadescuento
+					    ProductoImpuestos = new List<ImpuestoModel>{
+						new ImpuestoModel{
+						    cod_tipo= "2", // documentolegallineaimpcod
+						    cod_imp= "2" // documentolegallineaimpcodporc
+						}
+					    }.ToArray(),
+					}};
+	  liquidacion.ProductList = productList.ToArray();
+	  liquidacion.FormaPagoList =
+	  new List<FormaPagoViewModel> { new FormaPagoViewModel {
+					     Plazo = 15, //DocumentolegalPagoPlazo
+					     UnidadTiempo = "DIAS", // DocumentolegalPagoUnidadTiempo
+					     Total = decimal.Parse("21186.72"), //DocumentolegalPagoTotal
+					     Codigo = "20" // DocumentolegalPagoCodigo
+					 } }.ToArray();               //informacion Adicional
+	  liquidacion.DatosAdicionalesList = new List<CampoAdicional> {
+	      new CampoAdicional{
+		  nombre = "FINCA", //documentolegalinformacionadici.documentolegalinfoadicnombre
+		  valor= "GENEVIV" //documentolegalinformacionadici.documentolegalinfoadicvalor
+	      }
+	  }.ToArray();
+	  var result = client.InsertPurchaseLiquidation(liquidacion, "yrsuarez@gmail.com", "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw==");
+	  MessageBox.Show((result.Sucessful) ? "OK" : result.data);
+      }
+    #+END_SRC 
+
+    And the equivalent JS code is:
+
+    #+BEGIN_SRC js
+      let purchaseLiquidation = {
+	// FacturaViewModel
+	purchaseLiquidation: {
+	  secuencial: "001-002-000028521",// documentolegalnumero
+	  fechaEmisionArg: DateTime.Now.AddDays(-3), //documentolegalfechaemision
+	  identificacionProveedorArg: "809317357B01", // documentolegalsncodigo
+	  razonSocialCompradorArg: "ESMERALDA BREEDING BV.", //documentolegalsnnombremostrado
+	  correo_proveedor: "yrsuarez@gmail.com" // documentolegalemail
+	  // Product List
+	  ProductList: {
+	    ProductoViewModel: {
+	      cod_producto: "1", 
+	      nom_producto: "REGALIAS 4TO TRIMESTRE AÑO 2019", 
+	      cantidad: 1, 
+	      tipo_producto: "BIEN",
+	      precioSinsubsidio: parseFloat("18916.71"), 
+	      valor_producto: parseFloat("18916.71"), 
+	      descuento_producto: 0, 
+	      ProductoImpuestos{
+		ImpuestoModel{
+		  cod_tipo: "2",
+		  cod_imp: "2"
+		}
+	      }
+	    }
+	  }
+	  // Forma pago
+	  FormaPagoList{
+	    FormaPagoViewModel {
+	      Plazo: 15, 
+	      UnidadTiempo: "DIAS", 
+	      Total: parseFloat("21186.72"), 
+	      Codigo: "20" 
+	    }
+	  },
+    
+	  // Datos adicionales
+	  DatosAdicionalesList: {
+	    CampoAdicional: {
+	      nombre: 'FINCA',
+	      valor: "GENEVIV" 
+	    },
+	  },
+	},
+	user: "yrsuarez@gmail.com",
+	password: "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="
+      }
+
+      soap.createClient(soapURL,
+			function(err, client) {
+			  client.InsertPurchaseLiquidation(purchaseLiquidation, function(err, result) {
+			    console.log(result);
+			  });
+
+			});
+
+    #+END_SRC
+
+** TODO Making the API connection to the SRI's
+
+   After understanding the code, which won't be implemented into the
+   API, I need to make methods based on the above prototypes that will
+   validate, send, receive and check the received response of the
+   SRI's web services.
+
+*** DONE Understanding what a SOAP
+
+    Simple Object Access Protocol (SOAP) is not an alternative to
+    Representational State Transfer (REST), which I've already used
+    with HTTP. But a competitor, another infrastructure on how to
+    access web services. They both use the HTTP protocol, but SOAP uses
+    XML rather than an URL for data transfer. 
+
+*** TODO Understanding the SOAP's npm module
+  :PROPERTIES:
+  :header-args:js: :tangle no
+  :header-args:bash: :tangle no
+  :END:
+
+    This is only for educational purposes, and I will compare some of
+    the examples on how to connect written in .net and transfer them
+    to this SOAP module.
+
+    We first add the module in our API with require:
+
+    #+BEGIN_SRC bash
+    npm install soap
+    #+END_SRC
+    
+    I used --save for this, so the dependency is saved in my package
+    file. And I already added this to the API. After setting this, the
+    documentation shows us the simplest example of a connection, this
+    is copied from the official documentation:
+
+    #+BEGIN_SRC js
+
+      const soap = require('soap');
+      const soapURL = 'http://example.com/wsdl?wsdl';
+      const args = {name: 'value'};
+      soap.createClient(url, function(err, client) {
+	client.MyFunction(args, function(err, result) {
+	  console.log(result);
+	});
+      });
+
+    #+END_SRC
+
+    And the .net code we have as an example is the following:
+
+    #+BEGIN_SRC bash
+
+      var result = client.InsertInvoice(factura, "yrsuarez@gmail.com", "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw==");
+      MessageBox.Show((result.Sucessful) ? "OK" : result.data);
+
+    #+END_SRC
+
+    So as args, we need *factura, the mail, and that string*. So the
+    args would be:
+
+    #+BEGIN_SRC js
+    const args = {factura, email = "yrsuarez@gmail.com", "ANt0XfwpMUutXzuMGP9Drp4baYeks6ud9di4e9VbGYl0uMmVQSTcyYRlppgjfwKPnw=="};
+    #+END_SRC
+    
+    And then run the connection. But there's a catch, the 'MyFunction'
+    part will throw error, since 'MyFunction' should be the name of a
+    function defined in the SOAP Service we're trying to reach, so,
+    instead of running that code, the following reaches the host and
+    checks what available functions there are, so we won't use args
+    yet.
+
+    #+BEGIN_SRC js
+
+      soap.createClient(soapURL, function(err, client) {
+	if (err) throw err
+	client.describe()
+      })
+
+    #+END_SRC
+
+    'MyFunction' has to be replaced with InsertInvoice in this case,
+    and we have to give them three things, 'invoice', the object of a
+    *factura*, an user and a password, both string, and password as a
+    Hash.
+
+
+
+    
+    
