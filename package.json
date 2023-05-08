@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "deploy": "gcloud app deploy",
-    "start": "npm run clusters && npm run apidoc",
+    "start": "npm run --max_old_space_size=4096 clusters && npm run apidoc",
     "lint": "repo-tools lint",
     "pretest": "npm run lint",
     "clusters": "babel-node clusters.js",
