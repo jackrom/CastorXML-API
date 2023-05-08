@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  castorxml:
+    image: "castorxml:latest"
+    container_name: "castorxml"
+    ports:
+      - "8080:8080"
+    volumes:
+      - "./config/:/opt/castor/data/import:ro"
+    entrypoint: "/opt/castor/bin/castor.sh start-dev --import-realm"
+    restart: always
+    environment:
+      DATABASE_HOST: "162.0.220.89"
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: "xplbhxmr_main"
+      DATABASE_USER: "xplbhxmr_jackrom"
+      DATABASE_PASSWORD: "10092558@Sissi"
+      DIALECT: "org.hibernate.dialect.MySQL5InnoDBDialect"
+
+
