@@ -2046,11 +2046,14 @@ module.exports = app => {
                         // throw new Error(error)
                     }
                     // console.log(response)
-                    if(response && response.body.length > 0) {
+                    if (response && response.body.length > 0) {
                         let respuesta = JSON.parse(response.body)
+                        console.log(response.body.length)
+                        console.log(respuesta.Sucessful)
                         if (respuesta.Sucessful !== false) {
                             let docs = []
                             respuesta.forEach((obj) => {
+                                console.log(obj.Tipo + ' | ' + obj.ClaveAcceso)
                                 Documentos.findAndCountAll({
                                     where: {
                                         Tipo: obj.Tipo,
@@ -2069,6 +2072,7 @@ module.exports = app => {
                                             obj.tag = 0
                                         }
                                         docs.push(obj)
+
                                         if (docs.length === respuesta.length) {
                                             res.json(JSON.stringify(docs))
                                         }
