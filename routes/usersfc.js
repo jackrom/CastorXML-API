@@ -2033,7 +2033,7 @@ module.exports = app => {
                 }
                 let options = {
                     'method': 'POST',
-                    'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/GetXmlDocuments',
+                    'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/GetXmlDocuments',
                     'headers': {
                         'Content-Type': 'application/json'
                     },

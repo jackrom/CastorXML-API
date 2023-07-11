@@ -3150,7 +3150,7 @@ module.exports = app => {
             }
             let options = {
                 'method': 'POST',
-                'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/InsertInvoice',
+                'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/InsertInvoice',
                 'headers': {
                     'Content-Type': 'application/json'
                 },
@@ -3223,7 +3223,7 @@ module.exports = app => {
             }
             let options = {
                 'method': 'POST',
-                'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/InsertRetention',
+                'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/InsertRetention',
                 'headers': {
                     'Content-Type': 'application/json'
                 },
@@ -3293,7 +3293,7 @@ module.exports = app => {
             }
             let options = {
                 'method': 'POST',
-                'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/InsertDebitNote',
+                'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/InsertDebitNote',
                 'headers': {
                     'Content-Type': 'application/json'
                 },
@@ -3367,7 +3367,7 @@ module.exports = app => {
             }
             let options = {
                 'method': 'POST',
-                'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/InsertCreditNote',
+                'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/InsertCreditNote',
                 'headers': {
                     'Content-Type': 'application/json'
                 },
@@ -3441,7 +3441,7 @@ module.exports = app => {
             }
             let options = {
                 'method': 'POST',
-                'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/InsertPurchaseLiquidation',
+                'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/InsertPurchaseLiquidation',
                 'headers': {
                     'Content-Type': 'application/json'
                 },
@@ -3520,7 +3520,7 @@ module.exports = app => {
             }
             let options = {
                 'method': 'POST',
-                'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/InsertGuide',
+                'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/InsertGuide',
                 'headers': {
                     'Content-Type': 'application/json'
                 },
@@ -3586,7 +3586,7 @@ module.exports = app => {
                         }
                         let options = {
                             'method': 'POST',
-                            'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/GetDocState',
+                            'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/GetDocState',
                             'headers': {
                                 'Content-Type': 'application/json'
                             },
@@ -3645,7 +3645,7 @@ module.exports = app => {
         }
         let options = {
             'method': 'POST',
-            'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/GetDocState',
+            'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/GetDocState',
             'headers': {
                 'Content-Type': 'application/json'
             },
@@ -3700,7 +3700,7 @@ module.exports = app => {
         }
         let options = {
             'method': 'POST',
-            'url': 'http://186.4.170.239/RestInvoiceIntegration/operation/GetDocState',
+            'url': 'http://181.39.212.133/RestInvoiceIntegration/operation/GetDocState',
             'headers': {
                 'Content-Type': 'application/json'
             },

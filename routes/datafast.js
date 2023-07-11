@@ -12,7 +12,7 @@ module.exports = app => {
     const Op = Sequelize.Op
     const nodeMailer = require('nodemailer')
     const soap = require('soap')
-    const soapURL = 'http://186.4.187.28/InvoiceService/ServiceEb.svc?singleWsdl'
+    const soapURL = 'http://181.39.212.133/InvoiceService/ServiceEb.svc?singleWsdl'
     // const soapURL = 'http://186.4.187.28/EbIntegrationService/ServiceEb.svc?singleWsdl'
     /**
      * @api {get} /users Devuelve los datos de todos los usuarios registrados
