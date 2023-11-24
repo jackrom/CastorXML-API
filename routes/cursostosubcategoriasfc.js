@@ -283,7 +283,7 @@ module.exports = app => {
             .then(registro => {
                 if (registro) {
                     // Continuar con la eliminación
-                    let datos = JSON.parse(JSON.stringify(datos));
+                    let datos = JSON.parse(JSON.stringify(req.query.datos));
                     datos.registro = registro;
                     datos.query = "INSERT INTO `Cursostosubcategoriasfcs` (`id`, `cursoId`, `subcategoriaId`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.subcategoriaId, registro.createdAt, registro.updatedAt)";
 

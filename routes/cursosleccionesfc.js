@@ -141,7 +141,7 @@ module.exports = app => {
         CursosleccionesFC.findOne({ where: { id: req.params.id } })
             .then(registro => {
                 if (registro) {
-                    let datos = JSON.parse(JSON.stringify(datos));
+                    let datos = JSON.parse(JSON.stringify(req.query.datos));
 
                     datos.registro = registro;
                     datos.query = "INSERT INTO `Cursosleccionesfcs` (`id`, `cursoId`, `seccionId`, `guia`, `mapamental`, `ejercicio`, `modulo`, `orden`, `otros`, `titulo`, `videourl`, `visibilidad`, `tipo`, `informacion`, `enlace`, `iframe`, `leccionactiva`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.seccionId, registro.guia, registro.mapamental, registro.ejercicio, registro.modulo, registro.orden, registro.otros, registro.titulo, registro.videourl, registro.visibilidad, registro.tipo, registro.informacion, registro.enlace, registro.iframe, registro.leccionactiva, registro.createdAt, registro.updatedAt)";
