@@ -18,7 +18,7 @@ const nodeMailer = require("nodemailer");
 Sequelize = require("sequelize")
 
 const Notificaciones = require('../utils/notificaciones');
-const PlantillasEmail = require('../templates/PlantillasEmail');
+const PlantillasEmail = require('../templates/plantillasEmail');
 
 module.exports = app => {
     const Usersfc = app.db.models.Usersfc
