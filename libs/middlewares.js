@@ -15,7 +15,7 @@ const allowedOrigins = [
     'http://databrain.online'
 ];
 module.exports = app => {
-    app.set("port", 3000);
+    app.set("port", 8080);
     app.set("json spaces", 4);
     app.use(morgan("common", {
         stream: {
