@@ -1,5 +1,5 @@
-const Notificaciones = require('../utils/notificaciones');
-const PlantillasEmail = require('../templates/PlantillasEmail');
+const Notificaciones = require("../utils/notificaciones");
+const PlantillasEmail = require("../templates/plantillasEmail");
 
 module.exports = app => {
     const CursostosubcategoriasFC = app.db.models.Cursostosubcategoriasfc

@@ -1,8 +1,8 @@
 const multer = require("multer");
 const path = require("path");
 
-const Notificaciones = require('../utils/notificaciones');
-const PlantillasEmail = require('../templates/PlantillasEmail');
+const Notificaciones = require("../utils/notificaciones");
+const PlantillasEmail = require("../templates/plantillasEmail");
 
 module.exports = app => {
     const CursosleccionesFC = app.db.models.Cursosleccionesfc
