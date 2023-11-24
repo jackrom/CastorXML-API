@@ -1,9 +1,14 @@
 const multer = require("multer");
 const path = require("path");
+
+const Notificaciones = require('../utils/notificaciones');
+const PlantillasEmail = require('../templates/PlantillasEmail');
+
 module.exports = app => {
     const CursosleccionesFC = app.db.models.Cursosleccionesfc
     const multer  = require('multer')
     const path = require('path')
+    const notificador = new Notificaciones();
 
     // SET STORAGE
     let storage = multer.diskStorage({
@@ -132,17 +137,52 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.delete("/cursosleccionesfc/:id", (req, res) => {
-        CursosleccionesFC.destroy({
-            where: {
-                id: req.params.id
-            }
-        })
-            .then(resultados => {
-                res.json(resultados)
+        // Primero buscar el registro
+        CursosleccionesFC.findOne({ where: { id: req.params.id } })
+            .then(registro => {
+                if (registro) {
+                    let datos = JSON.parse(JSON.stringify(datos));
+
+                    datos.registro = registro;
+                    datos.query = "INSERT INTO `Cursosleccionesfcs` (`id`, `cursoId`, `seccionId`, `guia`, `mapamental`, `ejercicio`, `modulo`, `orden`, `otros`, `titulo`, `videourl`, `visibilidad`, `tipo`, `informacion`, `enlace`, `iframe`, `leccionactiva`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.seccionId, registro.guia, registro.mapamental, registro.ejercicio, registro.modulo, registro.orden, registro.otros, registro.titulo, registro.videourl, registro.visibilidad, registro.tipo, registro.informacion, registro.enlace, registro.iframe, registro.leccionactiva, registro.createdAt, registro.updatedAt)";
+;
+
+                    CursosleccionesFC.destroy({ where: { id: req.params.id } })
+                        .then(resultados => {
+                            if (resultados) {
+                                // Preparar los datos adicionales incluyendo el registro completo
+                                const usuario = req.query.usuario;
+                                const fechaHora = req.query.fechaHora;
+                                const aplicacion = req.query.aplicacion;
+                                const idRegistro = req.query.idRegistro;
+                                const ip = req.query.ip;
+                                const datosAdicionales = JSON.stringify(registro); // Registro completo
+
+                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursosleccionesfc', datosAdicionales);
+
+                                notificador.sendMessage('Recupera tu contraseña ✔', plantilla, "soporte@facilcontabilidad.net");
+                                let result = {
+                                    msg: 'Registro eliminado correctamente',
+                                }
+                                res.json(result)
+                            } else {
+                                let result = {
+                                    msg: 'Registro no pudo ser eliminado',
+                                }
+                                res.json(result)
+                            }
+                        })
+                        .catch(error => {
+                            console.log(error.message)
+                            res.status(412).json({msg: error.message});
+                        });
+                } else {
+                    res.status(404).json({ msg: "Registro no encontrado" });
+                }
             })
             .catch(error => {
                 console.log(error.message)
-                res.status(412).json({msg: error.message});
+                res.status(412).json({ msg: error.message });
             });
     });
 

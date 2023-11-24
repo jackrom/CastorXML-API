@@ -7,8 +7,15 @@ const helmet = require("helmet");
 const logger = require("./logger.js");
 const path = require("path");
 const fileUpload = require('express-fileupload')
+const allowedOrigins = [
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'http://facilcontabilidad.org',
+    'http://localhost:4200',
+    'http://databrain.online'
+];
 module.exports = app => {
-    app.set("port", 8080);
+    app.set("port", 3000);
     app.set("json spaces", 4);
     app.use(morgan("common", {
         stream: {
@@ -30,7 +37,17 @@ module.exports = app => {
      */
     app.use(cors({
         credentials: true,
-        origin: "*",
+        origin: function(origin, callback) {
+            // Permitir peticiones sin origen (por ejemplo, Postman y similares)
+            if (!origin) return callback(null, true);
+
+            // Comprobar si el origen de la petición está en nuestra lista de orígenes permitidos
+            if (allowedOrigins.indexOf(origin) === -1) {
+                let msg = `El origen CORS ${origin} no está permitido.`;
+                return callback(new Error(msg), false);
+            }
+            return callback(null, true);
+        },
         methods: ["GET", "POST", "PUT", "DELETE"],
         allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, x-token"],
         preflightContinue: true

@@ -1,5 +1,5 @@
 
 
 module.exports = (app) => {
-    return  require("./plantillas.js")
+    return  require("./plantillasEmail.js")
 }

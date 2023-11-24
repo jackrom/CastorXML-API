@@ -1,8 +1,13 @@
+const Notificaciones = require('../utils/notificaciones');
+const PlantillasEmail = require('../templates/PlantillasEmail');
+
 module.exports = app => {
     const CursosseccionesFC = app.db.models.Cursosseccionesfc
     const CursosleccionesFC = app.db.models.Cursosleccionesfc
     const multer  = require('multer')
     const path = require('path')
+
+    const notificador = new Notificaciones();
 
     // SET STORAGE
     let storage = multer.diskStorage({
@@ -108,21 +113,50 @@ module.exports = app => {
      * @apiErrorExample {json} Delete error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.delete("/cursosseccionesfc/:id", (req, res) => {
-        CursosseccionesFC.destroy({
-            where: {
-                id: req.params.id
-            }
-        })
-            .then(resultados => {
-                console.log(resultados)
-                res.json(resultados)
+    app.delete("/cursostosubcategoriasfc/:id", (req, res) => {
+
+        CursosseccionesFC.findOne({ where: { id: req.params.id } })
+            .then(registro => {
+                if (registro) {
+                    let datos = JSON.parse(JSON.stringify(datos));
+                    datos.registro = registro;
+                    datos.query = "INSERT INTO `Cursosseccionesfcs` (`id`, `cursoId`, `orden`, `titulo`, `descripcion`, `lecciones`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.orden, registro.titulo, registro.descripcion, registro.lecciones, registro.createdAt, registro.updatedAt)";
+
+                    CursosseccionesFC.destroy({
+                        where: {
+                            id: req.params.id
+                        }
+                    })
+                        .then(resultados => {
+                            if (resultados) {
+                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursosseccionesfc', datosAdicionales);
+
+                                notificador.sendMessage('Recupera tu contraseña ✔', plantilla, "soporte@facilcontabilidad.net");
+                                let result = {
+                                    msg: 'Registro eliminado correctamente',
+                                }
+                                res.json(result)
+                            } else {
+                                let result = {
+                                    msg: 'Registro no pudo ser eliminado',
+                                }
+                                res.json(result)
+                            }
+                        })
+                        .catch(error => {
+                            console.log(error.message)
+                            res.status(412).json({msg: error.message});
+                        });
+                } else {
+                    res.status(404).json({ msg: "Registro no encontrado" });
+                }
             })
             .catch(error => {
-                console.log(error.message)
-                res.status(412).json({msg: error.message});
+                res.status(412).json({ msg: error.message });
             });
     });
+
+
     /**
      * @api {post} /registerusuarios Registra un nuevo usuario
      * @apiGroup Users
@@ -198,6 +232,7 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     });
+
     /**
      * @api {put} /actualizarusuarios Actualiza un usuario registrado
      * @apiGroup Users
@@ -249,7 +284,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     });
-
 
     app.get("/reparartablasecciones", (req, res) => {
         CursosseccionesFC.findAll({

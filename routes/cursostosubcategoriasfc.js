@@ -1,5 +1,10 @@
+const Notificaciones = require('../utils/notificaciones');
+const PlantillasEmail = require('../templates/PlantillasEmail');
+
 module.exports = app => {
     const CursostosubcategoriasFC = app.db.models.Cursostosubcategoriasfc
+
+    const notificador = new Notificaciones();
 
     /**
      * @api {get} /users Devuelve los datos de todos los usuarios registrados
@@ -273,14 +278,52 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.delete("/cursostosubcategoriasfc/:id", (req, res) => {
-        CursostosubcategoriasFC.destroy({where: {id: req.params.id}})
-            .then(res => {
-                res.json(result)
+        // Obtener el registro antes de eliminarlo
+        CursostosubcategoriasFC.findOne({ where: { id: req.params.id } })
+            .then(registro => {
+                if (registro) {
+                    // Continuar con la eliminación
+                    let datos = JSON.parse(JSON.stringify(datos));
+                    datos.registro = registro;
+                    datos.query = "INSERT INTO `Cursostosubcategoriasfcs` (`id`, `cursoId`, `subcategoriaId`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.subcategoriaId, registro.createdAt, registro.updatedAt)";
+
+                    CursostosubcategoriasFC.destroy({ where: { id: req.params.id } })
+                        .then(resultados => {
+                            if (resultados) {
+                                // Preparar los datos adicionales incluyendo el registro completo
+                                const usuario = req.query.usuario;
+                                const fechaHora = req.query.fechaHora;
+                                const aplicacion = req.query.aplicacion;
+                                const idRegistro = req.query.idRegistro;
+                                const ip = req.query.ip;
+                                const datosAdicionales = JSON.stringify(registro);
+
+                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursostosubcategoriasfc', datosAdicionales);
+
+                                notificador.sendMessage('Recupera tu contraseña ✔', plantilla, "soporte@facilcontabilidad.net");
+                                let result = {
+                                    msg: 'Registro eliminado correctamente',
+                                }
+                                res.json(result)
+                            } else {
+                                let result = {
+                                    msg: 'Registro no pudo ser eliminado',
+                                }
+                                res.json(result)
+                            }
+                        })
+                        .catch(error => {
+                            res.json({ msg: error.message })
+                        });
+                } else {
+                    res.status(404).json({ msg: "Registro no encontrado" });
+                }
             })
             .catch(error => {
-                res.json({msg: error.message})
+                res.status(412).json({ msg: error.message });
             });
     });
+
 
     /**
      * @api {post} /registerusuarios Registra un nuevo usuario

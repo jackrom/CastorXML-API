@@ -1,10 +1,14 @@
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcrypt")
+const MailerSend = require("mailersend")
+const Sender = require("mailersend")
+const Recipient = require("mailersend").Recipient;
+const EmailParams = require("mailersend").EmailParams;
 const request = require('request')
 const templates = require('../templates/email')
 const Imap = require('imap')
-var MailParser = require("mailparser").MailParser
-var Promise = require("bluebird")
+const MailParser = require("mailparser").MailParser;
+const Promise = require("bluebird");
 Promise.longStackTraces()
 const base64  = require('base64-stream')
 const moment = require('moment')
@@ -12,6 +16,10 @@ inspect = require('util').inspect
 let fs = require('fs')
 const nodeMailer = require("nodemailer");
 Sequelize = require("sequelize")
+
+const Notificaciones = require('../utils/notificaciones');
+const PlantillasEmail = require('../templates/PlantillasEmail');
+
 module.exports = app => {
     const Usersfc = app.db.models.Usersfc
     const ProductosFC = app.db.models.Productosfc
@@ -35,7 +43,8 @@ module.exports = app => {
     const CursosFC = app.db.models.Cursosfc
     const cfg = app.libs.config
     const Op = Sequelize.Op
-    const nodeMailer = require('nodemailer')
+
+    const notificador = new Notificaciones();
 
     app.get("/usersfc/getmailsgmail", (req, res) => {
         Usersfc.findOne({
@@ -2323,7 +2332,7 @@ module.exports = app => {
     })
 
     app.post("/usersfc/sendRecoveryAcademy", (req, res) => {
-        // console.log(req.body.email)
+        console.log(req.body.email)
         let token = jwt.sign(req.body.email, cfg.jwtSecret);
         Usersfc.findOne({
             where: {
@@ -2333,7 +2342,7 @@ module.exports = app => {
             .then(result => {
                 // console.log('result', result)
                 let fecha = new Date()
-                datos = {
+                let datos = {
                     new_password_key: token,
                     new_password_request: Date.now()
                 }
@@ -2343,152 +2352,18 @@ module.exports = app => {
                             email: req.body.email
                         }
                     })
-                        .then(resultados => {
-                            let transporter = nodeMailer.createTransport({
-                                host: "smtp.elasticemail.com",
-                                port: 587,
-                                secure: false,
-                                // port : 465,
-                                // secure: true, // true for 465, false for other ports
-                                auth: {
-                                    user: "info@facilcontabilidad.com",
-                                    pass: "CC9800D31C6435095E42E5BEA7CC710B4191",
-                                },
-                            });
+                        .then(async resultados => {
+                            let dataMessage = {
+                                mensaje: "Recibiste este correo electrónico porque fue solicitado por un usuario del entorno de aplicaciones de FacilContabilidad. Esto es parte del procedimiento para crear una nueva contraseña en el sistema. Si NO solicitó una nueva contraseña, ignore este correo electrónico y su contraseña seguirá siendo la misma.",
+                                token: token,
+                                titulo: "Resetear Password",
+                                enlace: "http://facilcontabilidad.org/pages/authentication/reset-password-v2?action=recoverypassword&email=" + req.body.email + "&token=" + token
+                            }
 
-                            let template = `<table data-module="notification_default_xs_icon" data-thumb="http://www.stampready.net/dashboard/editor/user_uploads/zip_uploads/2017/10/16/4pId6zuQoxceDO0FnBKAPq38/notifications/thumbnails/171.png" data-visible="false" class="email_section" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                            <tbody>
-                                            <tr>
-                                              <td class="email_bg bg_light px py_lg" data-bgcolor="Light" style="font-size: 0;text-align: center;line-height: 100%;background-color: #d1deec;padding-top: 64px;padding-bottom: 64px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                <!--[if (mso)|(IE)]>
-                                                <table role="presentation" width="416" border="0" cellspacing="0" cellpadding="0" align="center" style="vertical-align:top;Margin:0 auto;">
-                                                  <tbody>
-                                                  <tr>
-                                                    <td align="center" style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;vertical-align:top;">
-                                                <![endif]-->
-                                                <div class="ui-resizable-handle ui-resizable-s" style="z-index: 90;"></div><table class="content_section_xs ui-resizable" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 416px;margin: 0 auto;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                <tbody>
-                                                <tr>
-                                                  <td class="content_cell bg_white brounded bt_primary px py_md" data-bgcolor="White" data-border-top-color="Border Primary" style="font-size: 0;text-align: center;background-color: #ffffff;border-top: 4px solid #ea5455; border-radius: 4px;padding-top: 32px;padding-bottom: 32px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                    <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                      <tbody>
-                                                      <tr>
-                                                        <td class="column_cell px py_xs text_primary text_center" data-color="Primary" style="vertical-align: top;color: #ea5455;text-align: center;padding-top: 8px;padding-bottom: 8px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                          <p class="img_inline" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;font-size: 16px;line-height: 100%;clear: both;"><a href="https://facilcontabilidad.org/" data-color="Primary" style="-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;text-decoration: none;color: #EA5455;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;"><img src="https://facilcontabilidad.org/logos/logo.png" width="210" height="" alt="FacilContabilidad" style="max-width: 210px;-ms-interpolation-mode: bicubic;border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;"></a></p>
-                                                        </td>
-                                                      </tr>
-                                                      </tbody>
-                                                    </table>
-                                                    <div class="column_row" style="font-size: 0;text-align: center;max-width: 624px;margin: 0 auto;">
-                                                      <!--[if (mso)|(IE)]>
-                                                      <table role="presentation" width="312" border="0" cellspacing="0" cellpadding="0" align="center" style="vertical-align:top;Margin:0 auto;">
-                                                        <tbody>
-                                                        <tr>
-                                                          <td align="center" style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;vertical-align:top;">
-                                                      <![endif]-->
-                                                      <div class="col_2" style="vertical-align: top;display: inline-block;width: 100%;max-width: 312px;">
-                                                        <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                          <tbody>
-                                                          <tr>
-                                                            <td class="column_cell bb_light" height="32" data-border-bottom-color="Border Light" style="vertical-align: top;border-bottom: 1px solid #dee0e1;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">&nbsp;</td>
-                                                          </tr>
-                                                          </tbody>
-                                                        </table>
-                                                      </div>
-                                                      <!--[if (mso)|(IE)]>
-                                                      </td>
-                                                      </tr>
-                                                      </tbody>
-                                                      </table>
-                                                      <![endif]-->
-                                                    </div>
-                                                    <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                      <tbody>
-                                                      <tr>
-                                                        <td class="column_cell px py_md text_dark text_center" data-color="Dark" style="vertical-align: top;color: #333333;text-align: center;padding-top: 32px;padding-bottom: 32px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                          <table class="column column_inline" role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;width: auto;margin: 0 auto;clear: both;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                            <tbody>
-                                                            <tr>
-                                                              <td class="column_cell bg_primary brounded_circle px py text_white text_center" data-bgcolor="Primary" data-color="White" style="vertical-align: top;background-color: #ea5455;color: #ffffff;border-radius: 50%;text-align: center;padding-top: 16px;padding-bottom: 16px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                                <p class="img_full" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;font-size: 0 !important;line-height: 100%;clear: both;"><img src="http://www.stampready.net/dashboard/editor/user_uploads/zip_uploads/2017/10/16/4pId6zuQoxceDO0FnBKAPq38/notifications/images/lock_white.png" width="48" height="48" alt="" style="max-width: 48px;-ms-interpolation-mode: bicubic;border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;display: block;width: 100%;margin: 0px auto;"></p>
-                                                              </td>
-                                                            </tr>
-                                                            </tbody>
-                                                          </table>
-                                                          <h2 class="mt mb_xs" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 16px;margin-bottom: 8px;word-break: break-word;font-size: 28px;line-height: 38px;font-weight: bold;">Olvidaste tu password?</h2>
-                                                          <p class="text_lead text_secondary mb_md" data-color="Secondary" style="color: #959ba0;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 32px;word-break: break-word;font-size: 19px;line-height: 31px;">No pasa nada. no es gran cosa!</p>
-                                                          <p class="mb_md" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 32px;word-break: break-word;font-size: 16px;line-height: 26px;">Para crear una nueva contraseña haz click en el boton abajo</p>
-                                                          <table role="presentation" class="ebutton" align="center" border="0" cellspacing="0" cellpadding="0" style="-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;margin: 0 auto;">
-                                                            <tbody>
-                                                            <tr>
-                                                              <td class="bg_primary" data-bgcolor="Primary" style="background-color: #ea5455;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;font-size: 16px;padding: 13px 24px;border-radius: 4px;line-height: normal;text-align: center;font-weight: bold;-webkit-transition: box-shadow .25s;transition: box-shadow .25s;">
-                                                                <a href="https://academy.facilcontabilidad.org/pages/authentication/reset-password-v2?action=recoverypassword&email=`+ req.body.email +`&token=`+ token +`" data-color="White" style="-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;text-decoration: none;color: #ffffff;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;font-weight: bold;">
-                                                                    <span data-color="White" style="color: #ffffff;text-decoration: none;">Resetear Password</span>
-                                                                </a>
-                                                              </td>
-                                                            </tr>
-                                                            </tbody>
-                                                          </table>
-                                                          <p style="color: #959ba0;">Recibiste este correo electrónico porque fue solicitado por un usuario de Castor X. Esto es parte del procedimiento para crear una nueva contraseña en el sistema. Si NO solicitó una nueva contraseña, ignore este correo electrónico y su contraseña seguirá siendo la misma.</p>
-                                                        </td>
-                                                      </tr>
-                                                      </tbody>
-                                                    </table>
-                                                  </td>
-                                                </tr>
-                                                <tr>
-                                                  <td class="content_cell" style="font-size: 0;text-align: center;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                    <div class="column_row" style="font-size: 0;text-align: center;max-width: 624px;margin: 0 auto;">
-                                                      <!--[if (mso)|(IE)]>
-                                                      <table role="presentation" width="624" border="0" cellspacing="0" cellpadding="0" align="center" style="vertical-align:top;Margin:0 auto;">
-                                                        <tbody>
-                                                        <tr>
-                                                          <td align="center" style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;vertical-align:top;">
-                                                      <![endif]-->
-                                                      <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                        <tbody>
-                                                            <tr>
-                                                              <td class="column_cell px py_md text_secondary text_center" data-color="Secondary" style="vertical-align: top;color: #959ba0;text-align: center;padding-top: 32px;padding-bottom: 32px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                                <p class="mb_xs text_link" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 8px;word-break: break-word;font-size: 16px;line-height: 26px;">©2020 Rowilled.</p>
-                                                              </td>
-                                                            </tr>
-                                                        </tbody>
-                                                      </table>
-                                                      <!--[if (mso)|(IE)]>
-                                                      </td>
-                                                      </tr>
-                                                      </tbody>
-                                                      </table>
-                                                      <![endif]-->
-                                                    </div>
-                                                  </td>
-                                                </tr>
-                                                </tbody>
-                                              </table>
-                                                <!--[if (mso)|(IE)]>
-                                                </td>
-                                                </tr>
-                                                </tbody>
-                                                </table>
-                                                <![endif]-->
-                                              </td>
-                                            </tr>
-                                            </tbody>
-                                          </table>`
+                            let plantilla = PlantillasEmail.recuperarPassword(dataMessage);
 
-                            // send mail with defined transport object
-                            let message = transporter.sendMail({
-                                from: 'FacilContabilidad <info@facilcontabilidad.com>', // sender address
-                                to: req.body.email, // list of receivers
-                                subject: "Recupera tu contraseña ✔", // Subject line
-                                // html: "<p>Haz click <a href='https://localhost:3000/pages/recover-password/'" + token + ">aquí</a> para continuar el proceso de recuperación</p><p><p><img src='https://juassic.com/castor.png' width='150px' /></p>",
-                                html: template
-                            }, (error, info) => {
-                                if (error) {
-                                    return console.log(error);
-                                }
-                                console.log('Message %s sent: %s', info.messageId, info.response);
-                            });
+                            notificador.sendMessage('Recupera tu contraseña ✔', plantilla, req.body.email);
+
                         })
                     res.json(result)
                 } else {
@@ -2746,145 +2621,15 @@ module.exports = app => {
                             }
                         })
                             .then(resultados => {
-                                let transporter = nodeMailer.createTransport({
-                                    host: "smtp.elasticemail.com",
-                                    port: 587,
-                                    secure: false,
-                                    // port : 465,
-                                    // secure: true, // true for 465, false for other ports
-                                    auth: {
-                                        user: "info@facilcontabilidad.com",
-                                        pass: "CC9800D31C6435095E42E5BEA7CC710B4191",
-                                    },
-                                });
+                                let dataMessage = {
+                                    mensaje: "Recibiste este correo electrónico porque fue solicitado por un usuario del entorno de aplicaciones de FacilContabilidad. Esto es parte del procedimiento para crear una nueva contraseña en el sistema. Si NO solicitó una nueva contraseña, ignore este correo electrónico y su contraseña seguirá siendo la misma.",
+                                    titulo: "Resetear Password",
+                                }
 
-                                let template = `<table data-module="notification_default_xs_icon" data-thumb="http://www.stampready.net/dashboard/editor/user_uploads/zip_uploads/2017/10/16/4pId6zuQoxceDO0FnBKAPq38/notifications/thumbnails/171.png" data-visible="false" class="email_section" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                            <tbody>
-                                            <tr>
-                                              <td class="email_bg bg_light px py_lg" data-bgcolor="Light" style="font-size: 0;text-align: center;line-height: 100%;background-color: #d1deec;padding-top: 64px;padding-bottom: 64px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                <!--[if (mso)|(IE)]>
-                                                <table role="presentation" width="416" border="0" cellspacing="0" cellpadding="0" align="center" style="vertical-align:top;Margin:0 auto;">
-                                                  <tbody>
-                                                  <tr>
-                                                    <td align="center" style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;vertical-align:top;">
-                                                <![endif]-->
-                                                <div class="ui-resizable-handle ui-resizable-s" style="z-index: 90;"></div><table class="content_section_xs ui-resizable" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 416px;margin: 0 auto;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                <tbody>
-                                                <tr>
-                                                  <td class="content_cell bg_white brounded bt_primary px py_md" data-bgcolor="White" data-border-top-color="Border Primary" style="font-size: 0;text-align: center;background-color: #ffffff;border-top: 4px solid #ea5455; border-radius: 4px;padding-top: 32px;padding-bottom: 32px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                    <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                      <tbody>
-                                                      <tr>
-                                                        <td class="column_cell px py_xs text_primary text_center" data-color="Primary" style="vertical-align: top;color: #ea5455;text-align: center;padding-top: 8px;padding-bottom: 8px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                          <p class="img_inline" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;font-size: 16px;line-height: 100%;clear: both;"><a href="https://facilcontabilidad.org/" data-color="Primary" style="-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;text-decoration: none;color: #EA5455;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;"><img src="https://facilcontabilidad.org/logos/logo.png" width="210" height="" alt="FacilContabilidad" style="max-width: 210px;-ms-interpolation-mode: bicubic;border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;"></a></p>
-                                                        </td>
-                                                      </tr>
-                                                      </tbody>
-                                                    </table>
-                                                    <div class="column_row" style="font-size: 0;text-align: center;max-width: 624px;margin: 0 auto;">
-                                                      <!--[if (mso)|(IE)]>
-                                                      <table role="presentation" width="312" border="0" cellspacing="0" cellpadding="0" align="center" style="vertical-align:top;Margin:0 auto;">
-                                                        <tbody>
-                                                        <tr>
-                                                          <td align="center" style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;vertical-align:top;">
-                                                      <![endif]-->
-                                                      <div class="col_2" style="vertical-align: top;display: inline-block;width: 100%;max-width: 312px;">
-                                                        <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                          <tbody>
-                                                          <tr>
-                                                            <td class="column_cell bb_light" height="32" data-border-bottom-color="Border Light" style="vertical-align: top;border-bottom: 1px solid #dee0e1;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">&nbsp;</td>
-                                                          </tr>
-                                                          </tbody>
-                                                        </table>
-                                                      </div>
-                                                      <!--[if (mso)|(IE)]>
-                                                      </td>
-                                                      </tr>
-                                                      </tbody>
-                                                      </table>
-                                                      <![endif]-->
-                                                    </div>
-                                                    <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                      <tbody>
-                                                      <tr>
-                                                        <td class="column_cell px py_md text_dark text_center" data-color="Dark" style="vertical-align: top;color: #333333;text-align: center;padding-top: 32px;padding-bottom: 32px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                          <table class="column column_inline" role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;width: auto;margin: 0 auto;clear: both;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                            <tbody>
-                                                            <tr>
-                                                              <td class="column_cell bg_primary brounded_circle px py text_white text_center" data-bgcolor="Primary" data-color="White" style="vertical-align: top;background-color: #ea5455;color: #ffffff;border-radius: 50%;text-align: center;padding-top: 16px;padding-bottom: 16px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                                <p class="img_full" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;font-size: 0 !important;line-height: 100%;clear: both;"><img src="http://www.stampready.net/dashboard/editor/user_uploads/zip_uploads/2017/10/16/4pId6zuQoxceDO0FnBKAPq38/notifications/images/lock_white.png" width="48" height="48" alt="" style="max-width: 48px;-ms-interpolation-mode: bicubic;border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;display: block;width: 100%;margin: 0px auto;"></p>
-                                                              </td>
-                                                            </tr>
-                                                            </tbody>
-                                                          </table>
-                                                          <h2 class="mt mb_xs" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 16px;margin-bottom: 8px;word-break: break-word;font-size: 28px;line-height: 38px;font-weight: bold;">Nueva contraseña creada</h2>
-                                                          <p class="text_lead text_secondary mb_md" data-color="Secondary" style="color: #959ba0;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 32px;word-break: break-word;font-size: 19px;line-height: 31px;">Has cambiado de forma correcta tu contraseña</p>
-                                                          <p class="mb_md" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 32px;word-break: break-word;font-size: 16px;line-height: 26px;">Ya puedes acceder a la sección de login y escribir tu email y nueva contraseña para acceder a todo tu contenido y las funcionalidades de tus aplicaciones FacilContabilidad</p>
-                                                          <table role="presentation" class="ebutton" align="center" border="0" cellspacing="0" cellpadding="0" style="-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;margin: 0 auto;">
-                                                            <tbody>
-                                                            <tr>
-                                                              <td class="bg_primary" data-bgcolor="Primary" style="background-color: #ea5455;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;font-size: 16px;padding: 13px 24px;border-radius: 4px;line-height: normal;text-align: center;font-weight: bold;-webkit-transition: box-shadow .25s;transition: box-shadow .25s;"><a href="https://pagosfc.facilcontabilidad.org" data-color="White" style="-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;text-decoration: none;color: #ffffff;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 0px;word-break: break-word;font-weight: bold;"><span data-color="White" style="color: #ffffff;text-decoration: none;">Ir a tus aplicaciones</span></a></td>
-                                                            </tr>
-                                                            </tbody>
-                                                          </table>
-                                                        </td>
-                                                      </tr>
-                                                      </tbody>
-                                                    </table>
-                                                  </td>
-                                                </tr>
-                                                <tr>
-                                                  <td class="content_cell" style="font-size: 0;text-align: center;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                    <div class="column_row" style="font-size: 0;text-align: center;max-width: 624px;margin: 0 auto;">
-                                                      <!--[if (mso)|(IE)]>
-                                                      <table role="presentation" width="624" border="0" cellspacing="0" cellpadding="0" align="center" style="vertical-align:top;Margin:0 auto;">
-                                                        <tbody>
-                                                        <tr>
-                                                          <td align="center" style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;vertical-align:top;">
-                                                      <![endif]-->
-                                                      <table class="column" role="presentation" align="center" width="100%" cellspacing="0" cellpadding="0" border="0" style="vertical-align: top;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                        <tbody>
-                                                        <tr>
-                                                          <td class="column_cell px py_md text_secondary text_center" data-color="Secondary" style="vertical-align: top;color: #959ba0;text-align: center;padding-top: 32px;padding-bottom: 32px;padding-left: 16px;padding-right: 16px;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;mso-table-lspace: 0pt;mso-table-rspace: 0pt;">
-                                                            <p class="mb_xs text_link" style="color: inherit;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 8px;word-break: break-word;font-size: 16px;line-height: 26px;">©2020 Rowilled.</p>
-                                                          </td>
-                                                        </tr>
-                                                        </tbody>
-                                                      </table>
-                                                      <!--[if (mso)|(IE)]>
-                                                      </td>
-                                                      </tr>
-                                                      </tbody>
-                                                      </table>
-                                                      <![endif]-->
-                                                    </div>
-                                                  </td>
-                                                </tr>
-                                                </tbody>
-                                              </table>
-                                                <!--[if (mso)|(IE)]>
-                                                </td>
-                                                </tr>
-                                                </tbody>
-                                                </table>
-                                                <![endif]-->
-                                              </td>
-                                            </tr>
-                                            </tbody>
-                                          </table>`
+                                let plantilla = PlantillasEmail.resetearPassword(dataMessage);
 
-                                // send mail with defined transport object
-                                let message = transporter.sendMail({
-                                    from: 'Castor X <info@facilcontabilidad.com>',
-                                    to: cliente.email, // list of receivers
-                                    subject: "Cambio de contraseña ✔",
-                                    html: template
-                                }, (error, info) => {
-                                    if (error) {
-                                        return console.log(error);
-                                    }
-                                    console.log('Message %s sent: %s', info.messageId, info.response);
-                                });
+                                notificador.sendMessage('Cambio de contraseña ✔', plantilla, cliente.email);
+
                                 res.json(resultados);
                             })
                     } else {
