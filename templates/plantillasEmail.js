@@ -277,8 +277,6 @@ class PlantillasEmail {
 
     }
 
-    // Aquí puedes agregar más métodos para otras plantillas de correo electrónico
-    // Por ejemplo:
     static notificacionGeneral(message) {
         // Retorna otra plantilla HTML basada en el mensaje
     }

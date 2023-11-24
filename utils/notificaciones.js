@@ -33,5 +33,5 @@ class Notificaciones {
         });
     }
 }
-
+// AQUI SE EXPORTA LA CLASE
 module.exports = Notificaciones;
