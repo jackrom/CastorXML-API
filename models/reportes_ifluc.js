@@ -25,6 +25,41 @@ module.exports = (sequelize, DataType) => {
             type: DataType.STRING,
             allowNull: true
         },
+        esf_cuadre: {
+            type: DataType.BOOLEAN,
+            defaultValue: true,
+            allowNull: false
+        },
+        eri_cuadre: {
+            type: DataType.BOOLEAN,
+            defaultValue: true,
+            allowNull: false
+        },
+        mov_cuadre: {
+            type: DataType.BOOLEAN,
+            defaultValue: true,
+            allowNull: false
+        },
+        ecp_cuadre: {
+            type: DataType.BOOLEAN,
+            defaultValue: true,
+            allowNull: false
+        },
+        efe_cuadre: {
+            type: DataType.BOOLEAN,
+            defaultValue: true,
+            allowNull: false
+        },
+        hasTurboNotas: {
+            type: DataType.BOOLEAN,
+            defaultValue: false,
+            allowNull: false
+        },
+        hasInformeSocietario: {
+            type: DataType.BOOLEAN,
+            defaultValue: false,
+            allowNull: false
+        },
     });
 
     ReportesIfluc.associate = function(models) {
@@ -291,6 +326,10 @@ module.exports = (sequelize, DataType) => {
         ReportesIfluc.hasMany(models.OtrosAntIfluc, {
             foreignKey: 'reporteId',
             as: 'otros_ant'
+        });
+        ReportesIfluc.hasMany(models.TurboNotasfc, {
+            foreignKey: 'reporteId',
+            as: 'reporteTurboNotas'
         });
     };
 

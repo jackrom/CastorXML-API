@@ -173,14 +173,15 @@ module.exports = app => {
             ],
             where: {
                 userId: req.query.user,
-                origen: req.query.origen
             },
             order: [
                 ['id', 'DESC'],
             ]
         })
             .then(results => {
+                console.log('EMPRESAS BY USER: ', results)
                 // const { q = '', role = null, plan = null, status = null, perPage = 10, currentPage = 1 } = config.params ?? {}
+                /*
                 const queryLower = req.query.q.toLowerCase()
                 let filteredEmpresas = results.filter(
                     result => ((
@@ -199,8 +200,9 @@ module.exports = app => {
                     filteredEmpresas = filteredEmpresas.slice(firstIndex, lastIndex)
                 }
 
-
-                res.json({ empresas: filteredEmpresas, totalPage, totalEmpresas})
+                */
+                // res.json({ empresas: results, totalPage, totalEmpresas})
+                res.json(results)
             })
             .catch(error => {
                 res.status(412).json({msg: error.message});

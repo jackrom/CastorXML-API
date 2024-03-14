@@ -303,7 +303,6 @@ module.exports = app => {
             })
     })
 
-
     app.post("/chequearallmails", (req, res) => {
         Users.findOne({
             include: [
@@ -633,8 +632,6 @@ module.exports = app => {
             });
     })
 
-
-
     app.get("/users/academy", (req, res) => {
         Users.findAll({
             include: [
@@ -698,7 +695,6 @@ module.exports = app => {
             });
     })
 
-
     app.post("/users/academylist", (req, res) => {
         console.log(req.body)
         Users.findAll({
@@ -746,7 +742,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     })
-
 
     app.get("/users/academy/:id", (req, res) => {
         Users.findOne({
@@ -805,7 +800,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     })
-
 
     app.post("/users", (req, res) => {
         let url = 'localhost:3001'
@@ -1584,7 +1578,6 @@ module.exports = app => {
             });
     })
 
-
     app.get("/users/afiliado/:serial", (req, res) => {
         console.log(req.params.serial)
         Users.findOne({
@@ -1614,7 +1607,6 @@ module.exports = app => {
             });
     })
 
-
     app.delete("/users/:id", (req, res) => {
         Users.destroy({where: {id: req.params.id}})
             .then(result => {
@@ -1624,7 +1616,6 @@ module.exports = app => {
                 res.json({msg: error.message})
             });
     })
-
 
         /**
          * @api {put} /actualizarusuarios Actualiza un usuario registrado
@@ -1681,7 +1672,6 @@ module.exports = app => {
                 });
             })
     })
-
 
     app.put("/user/update", (req, res) => {
         console.log(req.body.user)
@@ -2135,8 +2125,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message})
             })
     })
-
-
 
     app.post("/sendRecoveryAcademy", (req, res) => {
         // console.log(req.body.email)
@@ -2882,7 +2870,6 @@ module.exports = app => {
             });
     })
 
-
     app.get("/reparartablausuarios", (req, res) => {
         Users.findAll({
             where: {
@@ -2907,7 +2894,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     })
-
 
     app.get("/copiarpasswordtotabla", (req, res) => {
         Users.findAll({

@@ -2,6 +2,8 @@ const jwt = require("jsonwebtoken")
 // const jwt = require("jwt-simple")
 const bcrypt = require("bcrypt")
 const cors = require('cors')
+const { OAuth2Client } = require('google-auth-library');
+const oauthServer = require('oauth2-server');
 
 module.exports = app => {
 
@@ -16,6 +18,34 @@ module.exports = app => {
     const PlanToUserfc = app.db.models.PlanToUserfc
     const PlanesFC = app.db.models.Planesfc
     const AplicacionesToUserfc = app.db.models.AplicacionesToUserfc
+
+    const client = new OAuth2Client(cfg.googleClientId);
+
+    /*
+    request.post({
+        url: 'https://provider.com/oauth2/token',
+        form: {
+            code: req.body.code,
+            redirect_uri: 'TU_REDIRECT_URI',
+            client_id: 'TU_CLIENT_ID',
+            client_secret: 'TU_CLIENT_SECRET',
+            grant_type: 'authorization_code'
+        }
+    }, (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+            const info = JSON.parse(body);
+
+            // Aquí manejarías la creación/actualización del usuario en tu base de datos
+            // y la generación de tu propio JWT si es necesario.
+
+            res.json({ token: 'TU_JWT_GENERADO', user: 'INFORMACION_DEL_USUARIO' });
+        } else {
+            // Manejar errores
+            res.status(500).json({ error: 'Error al intercambiar el código de autorización' });
+        }
+    });
+    */
+
 
     /**
      * @api {post} /token Crear token de Autenticacion de usuarios
@@ -179,7 +209,7 @@ module.exports = app => {
                             message: 'Has superado el límite de IP´s permitidas por la aplicación, tu usuario se encuentra bloqueado, comunicate con los administradores para desbloquear tu usuario'
                         })
                     } else {
-
+                        res.cookie('session_id', 'valorDeLaSesion', { httpOnly: true, secure: true, domain: '.facilcontabilidad.org' });
                         res.json({
                             userAbilities: abilities,
                             token: token,
@@ -200,6 +230,48 @@ module.exports = app => {
             console.log(error.response)
             res.status(401).json({msg: 'Esta cuenta no existe en nuestros registros, por favor registrate para poder acceder'});
         });
+    });
+
+    app.post("/tokengoogle", async (req, res) => {
+        let { email, password, googleToken } = req.body;
+
+        try {
+            if (googleToken) {
+                // Verificar token de Google y obtener el email
+                const ticket = await client.verifyIdToken({
+                    idToken: googleToken,
+                    audience: cfg.googleClientId,
+                });
+                const payload = ticket.getPayload();
+                email = payload['email'];
+            }
+
+            // Buscar usuario por email
+            const user = await Usersfc.findOne({ where: { email: email } });
+            if (!user) {
+                return res.status(401).json({ auth: false, message: 'Usuario no encontrado.' });
+            }
+
+            // Verificar contraseña (saltar si es autenticación de Google)
+            if (password && !bcrypt.compareSync(password, user.password)) {
+                return res.status(401).json({ auth: false, message: 'Contraseña incorrecta.' });
+            }
+
+            // Crear payload y generar token
+            const payload = { id: user.id, email: user.email };
+            const token = jwt.sign(payload, cfg.jwtSecret, { expiresIn: '1h' });
+
+            // Emitir token
+            res.json({
+                auth: true,
+                token: token,
+                user: { id: user.id, email: user.email }
+            });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ auth: false, message: 'Error al procesar la autenticación.' });
+        }
     });
 
 

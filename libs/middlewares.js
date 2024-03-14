@@ -8,11 +8,21 @@ const logger = require("./logger.js");
 const path = require("path");
 const fileUpload = require('express-fileupload')
 const allowedOrigins = [
+    'http://localhost:3000',
     'http://localhost:8080',
+    'http://localhost:5173',
     'http://127.0.0.1:8080',
     'http://facilcontabilidad.org',
     'http://localhost:4200',
-    'http://databrain.online'
+    'http://databrain.online',
+    'https://facilcontabilidad.org',
+    'https://txtsupercias.facilcontabilidad.org',
+    'https://castorx.facilcontabilidad.org',
+    'https://ifluc.facilcontabilidad.org',
+    'http://txtsupercias.facilcontabilidad.org',
+    'http://ifluc.facilcontabilidad.org',
+    'https://47.243.181.194',
+    'http://47.243.181.194'
 ];
 module.exports = app => {
     app.set("port", 8080);

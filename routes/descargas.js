@@ -133,6 +133,7 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.post("/descargasByUser", (req, res) => {
+        console.log('DESCARGAS BY USER: ', req.body)
         if (req.headers.authorization) {
             if(app.auth.authenticate(req.headers.authorization.replace('Bearer ',''))) {
                 Descargas.findAll({

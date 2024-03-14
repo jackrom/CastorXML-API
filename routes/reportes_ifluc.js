@@ -76,6 +76,8 @@ module.exports = app => {
     const OtrosIfluc = app.db.models.OtrosIfluc
     const OtrosAntIfluc = app.db.models.OtrosAntIfluc
 
+    const TurboNotasfc = app.db.models.TurboNotasfc
+
 
     /**
      * @api {get} /users Devuelve los datos de todos los usuarios registrados
@@ -482,7 +484,7 @@ module.exports = app => {
                     filteredReportes = filteredReportes.slice(firstIndex, lastIndex)
                 }
 
-                res.json({ reportes: filteredReportes, totalPage, totalReporteifluc})
+                res.json({ reportes: results, totalPage, totalReporteifluc})
             })
             .catch(error => {
                 res.status(412).json({msg: error.message});
@@ -671,6 +673,10 @@ module.exports = app => {
                     model: OtrosIfluc,
                     as: 'otros'
                 },
+                {
+                    model: TurboNotasfc,
+                    as: 'reporteTurboNotas',
+                },
             ],
             where: {
                 reporteId: req.params.id
@@ -684,7 +690,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     });
-
 
     /**
      * @api {get} /users/id Devuelve los datos del usuario autenticado
@@ -911,6 +916,200 @@ module.exports = app => {
      * @apiErrorExample {json} Find error
      * HTTP/1.1 412 Precondition Failed
      */
+    app.get("/reportesIfluc/actual/ByPeriodo/:periodoId", (req, res) => {
+        ReportesIfluc.findOne({
+            include: [
+                {
+                    model: EmpresasIfluc,
+                    as: 'empresareporteifluc',
+                },
+                {
+                    model: PeriodosIfluc,
+                    as: 'periodosreporteifluc',
+                },
+                {
+                    model: ActivoscorrientesIfluc,
+                    as: 'activoscorrientesifluc',
+                },
+                {
+                    model: ActividadesdefinanciamientoIfluc,
+                    as: 'actividadesdefinanciamientoifluc',
+                },
+                {
+                    model: ActividadesdeinversionIfluc,
+                    as: 'actividadesdeinversionifluc',
+                },
+                {
+                    model: ActividadesdeoperacionIfluc,
+                    as: 'actividadesdeoperacionifluc',
+                },
+                {
+                    model: ActivosnocorrientesIfluc,
+                    as: 'activosnocorrientesifluc',
+                },
+                {
+                    model: ConciliacionIfluc,
+                    as: 'conciliacionganancianetaifluc',
+                },
+                {
+                    model: CostosIfluc,
+                    as: 'costosifluc',
+                },
+                {
+                    model: EcpIfluc,
+                    as: 'ecpifluc',
+                },
+                {
+                    model: GastosadministrativosIfluc,
+                    as: 'gastosadministrativosifluc',
+                },
+                {
+                    model: GastosdeventasIfluc,
+                    as: 'gastosdeventasifluc',
+                },
+                {
+                    model: GastosfinancierosIfluc,
+                    as: 'gastosfinancierosifluc',
+                },
+                {
+                    model: IngresosIfluc,
+                    as: 'ingresosifluc',
+                },
+                {
+                    model: OperacionesdiscontinuadasIfluc,
+                    as: 'operacionesdiscontinuadasifluc',
+                },
+                {
+                    model: OtrosingresosIfluc,
+                    as: 'otrosingresosifluc',
+                },
+                {
+                    model: OtrosgastosIfluc,
+                    as: 'otrosgastosifluc',
+                },
+                {
+                    model: OtrosresultadosintegralesIfluc,
+                    as: 'otrosresultadosintegralifluc',
+                },
+                {
+                    model: ParticipacioncontroladoraIfluc,
+                    as: 'resultadosparticipacioncontroladoraifluc',
+                },
+                {
+                    model: PasivoscorrientesIfluc,
+                    as: 'pasivoscorrientesifluc',
+                },
+                {
+                    model: PasivosnocorrientesIfluc,
+                    as: 'pasivosnocorrientesifluc',
+                },
+                {
+                    model: PatrimonioIfluc,
+                    as: 'patrimonioifluc',
+                },
+                {
+                    model: ResultadosIfluc,
+                    as: 'resultadosifluc',
+                },
+                {
+                    model: PerdidasAcumCuentasIncobyDeterioroIfluc,
+                    as: 'movperdidasacumuladascuentasincobrablesydeterioro',
+                },
+                {
+                    model: PerdidasAcumValNetRealizyOtrasPerdEnInvIfluc,
+                    as: 'movperdidasacumuladasvalornetorealizacion',
+                },
+                {
+                    model: PropiedadesPlantasyEquiposIfluc,
+                    as: 'movpropiedadesplantasyequipos'
+                },
+                {
+                    model: PropiedadesDeInversionIfluc,
+                    as: 'movpropiedadesdeinversion'
+                },
+                {
+                    model: IntangiblesIfluc,
+                    as: 'movintangibles'
+                },
+                {
+                    model: ActivosBiologicosIfluc,
+                    as: 'movactivosbiologicos'
+                },
+                {
+                    model: ImpuestosDiferidosIfluc,
+                    as: 'movimpuestosdiferidos'
+                },
+                {
+                    model: JubilacionPatronalIfluc,
+                    as: 'movjubilacionpatronal'
+                },
+                {
+                    model: DeshaucioIfluc,
+                    as: 'deshaucio'
+                },
+                {
+                    model: ActivosFinancierosLargoPlazoIfluc,
+                    as: 'activosfinancieroslargoplazo'
+                },
+                {
+                    model: OtrosIfluc,
+                    as: 'otros'
+                },
+            ],
+            where: {
+                periodoId: req.params.periodoId
+            }
+        })
+            .then(result => {
+                res.json(result)
+            })
+            .catch(error => {
+                res.status(412).json({msg: error.message});
+            });
+    });
+
+    /**
+     * @api {get} /users/id Devuelve los datos del usuario autenticado
+     * @apiGroup Users
+     * @apiHeader {String} Token de autorización de usuario autenticado
+     * @apiHeaderExample {json} Header
+     * {"Authorization": "JWT xyz.abc.123.hgf"}
+     * @apiParam {id} id ID del usuario que se quiere recuperar la info
+     * @apiSuccess {Number} id ID del usuario registrado
+     * @apiSuccess {String} nombres Nombres de usuario
+     * @apiSuccess {String} cedula Cédula de Identidad del usuario
+     * @apiSuccess {String} celular Número de teléfono celular del usuario
+     * @apiSuccess {String} direccion Dirección fiscal del usuario para las facturas
+     * @apiSuccess {String} email Correo electrónico del usuario
+     * @apiSuccess {String} password Password del usuario
+     * @apiSuccess {String} avatar Avatar identificativo del usuario
+     * @apiSuccess {String} facebook Si el registro se realizo desde facebook login
+     * @apiSuccess {String} push Código para notificaciones Push
+     * @apiSuccess {String} token Token unico válido para registrar el dispositivo del usuario
+     * @apiSuccess {String} version Version de la app con la cual se regsitra el usuario
+     * @apiSuccess {Date} updatedAt Update's date
+     * @apiSuccess {Date} createdAt Register's date
+     * @apiSuccessExample {json} Success
+     * HTTP/1.1 200 OK
+     * {
+     *    "id": 1,
+     *    "nombres": "raul",
+     *    "cedula": "Raúl Castro",
+     *    "celular": "raul@castro.net",
+     *    "direccion": "123456",
+     *    "email": "raul@hotmail.com",
+     *    "password": "123456789",
+     *    "avatar": "https://goubi.aplios.net/perfil.png",
+     *    "facebook": "0",
+     *    "push": "d75af91d-6454-4a3c-a044-03536bf4b891",
+     *    "token": "d75af91d-6454-4a3c-a044-03536bf4b891",
+     *    "version": "0.0.0"
+     *    "updated_at": "2016-02-10T15:20:11.700Z",
+     *    "created_at": "2016-02-10T15:29:11.700Z",
+     * }
+     * @apiErrorExample {json} Find error
+     * HTTP/1.1 412 Precondition Failed
+     */
     app.get("/reportesIfluc/:empresa/:periodo", (req, res) => {
         ReportesIfluc.findOne({
             where: {
@@ -1055,6 +1254,7 @@ module.exports = app => {
             })
     });
 
+
     /**
      * @api {put} /actualizarusuarios Actualiza un usuario registrado
      * @apiGroup Users
@@ -1092,13 +1292,16 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.put("/reportesIfluc", (req, res) => {
-        ReportesIfluc.update(req.query, {where: {id: req.query.id}})
+        ReportesIfluc.update(req.body.reporte, {
+            where: {
+                reporteId: req.body.reporte.reporteId
+            }})
             .then(result => {
                 console.log(result)
                 res.json(result)
-                //res.sendStatus(204)
             })
             .catch(error => {
+                console.log(error.response)
                 res.status(412).json({msg: error.message});
             });
     })

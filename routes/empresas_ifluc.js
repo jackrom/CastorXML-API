@@ -157,7 +157,7 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.get("/empresasIfluc/byuser", (req, res) => {
-        // console.log(req)
+        console.log(req.query)
         EmpresasIfluc.findAll({
             include: [
                 {
@@ -174,23 +174,19 @@ module.exports = app => {
             ]
         })
             .then(results => {
-                // const { q = '', role = null, plan = null, status = null, perPage = 10, currentPage = 1 } = config.params ?? {}
+                // const { q = '', role = null, plan = null, status = null, perPage = 10, currentPage = 1 } = req.query.params ?? {}
                 const queryLower = req.query.q.toLowerCase()
                 let filteredEmpresas = results.filter(
                     result => ((
-                        result.nombre.toLowerCase().includes(queryLower) &&
-                        result.direccion.toLowerCase().includes(queryLower) &&
-                        result.ciudad.toLowerCase().includes(queryLower) &&
-                        result.provincia.toLowerCase().includes(queryLower) &&
-                        result.gerente.toLowerCase().includes(queryLower)
+                        result.nombre.toLowerCase().includes(queryLower)
                     ))).reverse()
-                const totalPage = Math.ceil(filteredEmpresas.length / req.query.perPage) ? Math.ceil(filteredEmpresas.length / req.query.perPage) : 1
+                const totalPage = 1
                 const totalEmpresas = filteredEmpresas.length
                 if (req.query.perPage) {
                     const firstIndex = (req.query.currentPage - 1) * req.query.perPage
                     const lastIndex = req.query.perPage * req.query.currentPage
 
-                    filteredEmpresas = filteredEmpresas.slice(firstIndex, lastIndex)
+                    //  filteredEmpresas = filteredEmpresas.slice(firstIndex, lastIndex)
                 }
 
 

@@ -257,11 +257,12 @@ class PlantillasEmail {
                                   IP: ${ip}<br>
                                   <br>
                                   Los siguientes datos pueden ayudar a rastrear esta actividad:<br>
-                                  <ul>
-                                    <li>Identificador del Registro: ${idRegistro}</li>
-                                    <li>Nombre de la Tabla: ${tabla}</li>
-                                    <li>Datos Adicionales: ${datosAdicionales}</li>
-                                  </ul>
+                                  Identificador del Registro: ${idRegistro}<br>
+                                  Nombre de la Tabla: ${tabla}<br>
+                                  Query para restaurar: ${datosAdicionales.query}<br>
+                                  Latitud: ${datosAdicionales.latitude}<br>
+                                  Longitud: ${datosAdicionales.longitude}<br>
+                                  Registro eliminado: "${JSON.stringify(datosAdicionales.registro)}"
                                 </p>
                                 <p style="color: #333333;font-family: Arial, Helvetica, sans-serif;margin-top: 0px;margin-bottom: 32px;word-break: break-word;font-size: 16px;line-height: 26px;">
                                   Si consideras que esto es un error o una actividad sospechosa, por favor revisa los logs del sistema o contacta al equipo de soporte técnico.

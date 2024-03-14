@@ -113,15 +113,16 @@ module.exports = app => {
      * @apiErrorExample {json} Delete error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.delete("/cursostosubcategoriasfc/:id", (req, res) => {
-
+    app.delete("/cursosseccionesfc/:id", (req, res) => {
         CursosseccionesFC.findOne({ where: { id: req.params.id } })
             .then(registro => {
                 if (registro) {
-                    let datos = JSON.parse(JSON.stringify(req.query.datos));
+                    let datos = JSON.parse(req.query.datosAdicionales);
+                    console.log("DATOS: ", datos);
+                    console.log("REGISTRO: ", registro);
                     datos.registro = registro;
-                    datos.query = "INSERT INTO `Cursosseccionesfcs` (`id`, `cursoId`, `orden`, `titulo`, `descripcion`, `lecciones`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.orden, registro.titulo, registro.descripcion, registro.lecciones, registro.createdAt, registro.updatedAt)";
-
+                    datos.query = "INSERT INTO `Cursosseccionesfcs` (`id`, `cursoId`, `orden`, `titulo`, `descripcion`, `lecciones`, `createdAt`, `updatedAt`) VALUES (" + registro.id + ", " + registro.cursoId + ", " + registro.orden + ", " + registro.titulo + ", " + registro.descripcion + ", " + registro.lecciones + ", " + registro.createdAt + ", " + registro.updatedAt + ")";
+                    datos.tabla = "Cursosseccionesfcs";
                     CursosseccionesFC.destroy({
                         where: {
                             id: req.params.id
@@ -129,9 +130,13 @@ module.exports = app => {
                     })
                         .then(resultados => {
                             if (resultados) {
-                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursosseccionesfc', datosAdicionales);
-
-                                notificador.sendMessage('Recupera tu contraseña ✔', plantilla, "soporte@facilcontabilidad.net");
+                                const usuario = req.query.usuario;
+                                const fechaHora = req.query.fechaHora;
+                                const aplicacion = req.query.aplicacion;
+                                const idRegistro = req.query.idRegistro;
+                                const ip = datos.ip;
+                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursosseccionesfc', datos);
+                                notificador.sendMessage('Registro Eliminado en Cursosseccionesfcs ✔', plantilla, ["soporte@facilcontabilidad.net", "soportetifc1@gmail.com"]);
                                 let result = {
                                     msg: 'Registro eliminado correctamente',
                                 }

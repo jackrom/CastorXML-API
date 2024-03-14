@@ -278,29 +278,23 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.delete("/cursostosubcategoriasfc/:id", (req, res) => {
-        // Obtener el registro antes de eliminarlo
         CursostosubcategoriasFC.findOne({ where: { id: req.params.id } })
             .then(registro => {
                 if (registro) {
-                    // Continuar con la eliminación
-                    let datos = JSON.parse(JSON.stringify(req.query.datos));
+                    let datos = JSON.parse(req.query.datosAdicionales);
                     datos.registro = registro;
-                    datos.query = "INSERT INTO `Cursostosubcategoriasfcs` (`id`, `cursoId`, `subcategoriaId`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.subcategoriaId, registro.createdAt, registro.updatedAt)";
+                    datos.query = "INSERT INTO `Cursostosubcategoriasfcs` (`id`, `cursoId`, `subcategoriaId`, `createdAt`, `updatedAt`) VALUES (" +registro.id + ", " + registro.cursoId + ", " + registro.subcategoriaId + ", " + registro.createdAt + ", " + registro.updatedAt + ")";
 
                     CursostosubcategoriasFC.destroy({ where: { id: req.params.id } })
                         .then(resultados => {
                             if (resultados) {
-                                // Preparar los datos adicionales incluyendo el registro completo
                                 const usuario = req.query.usuario;
                                 const fechaHora = req.query.fechaHora;
                                 const aplicacion = req.query.aplicacion;
                                 const idRegistro = req.query.idRegistro;
                                 const ip = req.query.ip;
-                                const datosAdicionales = JSON.stringify(registro);
-
-                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursostosubcategoriasfc', datosAdicionales);
-
-                                notificador.sendMessage('Recupera tu contraseña ✔', plantilla, "soporte@facilcontabilidad.net");
+                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursostosubcategoriasfc', datos);
+                                notificador.sendMessage('Registro Eliminado en Cursostosubcategoriasfcs ✔', plantilla, ["soporte@facilcontabilidad.net", "soportetifc1@gmail.com"]);
                                 let result = {
                                     msg: 'Registro eliminado correctamente',
                                 }

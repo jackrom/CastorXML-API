@@ -4180,11 +4180,18 @@ module.exports = app => {
         const https = require('https');
         let request = https.request(options, function(response) {
             let chunks = [];
-
-            response.on("data", function (chunk) {
-                chunks.push(chunk);
-                // console.log('chunk ', JSON.parse(chunk))
-                res.json(JSON.parse(chunk))
+            let rawData = '';
+            response.on('data', function(chunk) {
+                rawData += chunk;
+            });
+            response.on('end', function() {
+                try {
+                    const parsedData = JSON.parse(rawData);
+                    res.json(parsedData);
+                } catch (e) {
+                    console.error(e.message);
+                    res.status(500).send('Error al analizar JSON');
+                }
             });
 
             response.on("end", function (chunk) {

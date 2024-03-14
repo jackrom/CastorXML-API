@@ -191,6 +191,7 @@ module.exports = app => {
      */
     app.post("/conciliacionantIfluc", (req, res) => {
         const reporte = req.body.cuentas
+        console.log(reporte)
         ConciliacionAntIfluc.findAll({
             where: {
                 userId: reporte.userId,
@@ -220,6 +221,7 @@ module.exports = app => {
                             res.json(result)
                         })
                         .catch(error => {
+                            console.log('ERROR: ', error)
                             res.status(412).json({msg: error.message});
                         });
                 }

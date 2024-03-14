@@ -137,30 +137,23 @@ module.exports = app => {
      * HTTP/1.1 412 Precondition Failed
      */
     app.delete("/cursosleccionesfc/:id", (req, res) => {
-        // Primero buscar el registro
         CursosleccionesFC.findOne({ where: { id: req.params.id } })
             .then(registro => {
                 if (registro) {
-                    let datos = JSON.parse(JSON.stringify(req.query.datos));
-
+                    let datos = JSON.parse(req.query.datosAdicionales);
                     datos.registro = registro;
-                    datos.query = "INSERT INTO `Cursosleccionesfcs` (`id`, `cursoId`, `seccionId`, `guia`, `mapamental`, `ejercicio`, `modulo`, `orden`, `otros`, `titulo`, `videourl`, `visibilidad`, `tipo`, `informacion`, `enlace`, `iframe`, `leccionactiva`, `createdAt`, `updatedAt`) VALUES (registro.id, registro.cursoId, registro.seccionId, registro.guia, registro.mapamental, registro.ejercicio, registro.modulo, registro.orden, registro.otros, registro.titulo, registro.videourl, registro.visibilidad, registro.tipo, registro.informacion, registro.enlace, registro.iframe, registro.leccionactiva, registro.createdAt, registro.updatedAt)";
-;
-
+                    datos.query = "INSERT INTO `Cursosleccionesfcs` (`id`, `cursoId`, `seccionId`, `guia`, `mapamental`, `ejercicio`, `modulo`, `orden`, `otros`, `titulo`, `videourl`, `visibilidad`, `tipo`, `informacion`, `enlace`, `iframe`, `leccionactiva`, `createdAt`, `updatedAt`) VALUES (" + registro.id + ", " + registro.cursoId + ", " + registro.seccionId + ", " + registro.guia + ", " + registro.mapamental + ", " + registro.ejercicio + ", " + registro.modulo + ", " + registro.orden + ", " + registro.otros + ", " + registro.titulo + ", " + registro.videourl + ", " + registro.visibilidad + ", " + registro.tipo + ", " + registro.informacion + ", " + registro.enlace + ", " + registro.iframe + ", " + registro.leccionactiva + ", " + registro.createdAt + ", " + registro.updatedAt + ")";
+                    datos.tabla = "Cursosleccionesfcs";
                     CursosleccionesFC.destroy({ where: { id: req.params.id } })
                         .then(resultados => {
                             if (resultados) {
-                                // Preparar los datos adicionales incluyendo el registro completo
                                 const usuario = req.query.usuario;
                                 const fechaHora = req.query.fechaHora;
                                 const aplicacion = req.query.aplicacion;
                                 const idRegistro = req.query.idRegistro;
-                                const ip = req.query.ip;
-                                const datosAdicionales = JSON.stringify(registro); // Registro completo
-
-                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, ip, idRegistro, 'cursosleccionesfc', datosAdicionales);
-
-                                notificador.sendMessage('Recupera tu contraseña ✔', plantilla, "soporte@facilcontabilidad.net");
+                                const ip = datos.ip;
+                                let plantilla = PlantillasEmail.eliminacionRegistro(usuario, fechaHora, aplicacion, datos.ip, idRegistro, 'cursosleccionesfc', datos);
+                                notificador.sendMessage('Registro Eliminado en Cursosleccionesfcs ✔', plantilla, ["soporte@facilcontabilidad.net", "soportetifc1@gmail.com"]);
                                 let result = {
                                     msg: 'Registro eliminado correctamente',
                                 }
