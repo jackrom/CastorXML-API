@@ -194,7 +194,7 @@ module.exports = app => {
                 }
 
 
-                res.json({ empresas: filteredEmpresas, totalPage, totalEmpresas})
+                res.json({ empresas: results, totalPage, totalEmpresas})
             })
             .catch(error => {
                 res.status(412).json({msg: error.message});

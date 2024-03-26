@@ -22,7 +22,10 @@ const allowedOrigins = [
     'http://txtsupercias.facilcontabilidad.org',
     'http://ifluc.facilcontabilidad.org',
     'https://47.243.181.194',
-    'http://47.243.181.194'
+    'http://47.243.181.194',
+    'chrome-extension://okbpmfjhbbenpnbbfghmpghbdlfonljl',
+    'https://facilcontabilidad.store',
+    'http://facilcontabilidad.store',
 ];
 module.exports = app => {
     app.set("port", 8080);

@@ -81,7 +81,7 @@ module.exports = app => {
      * HTTP/1.1 401 Unauthorized
      */
     app.post("/token", (req, res) => {
-        // console.log(req.query)
+        console.log(req.query)
         let emailUser, passwordUser, ip
         if (req.query && req.query.email !== undefined) {
             emailUser = req.query.email
@@ -349,7 +349,7 @@ module.exports = app => {
     app.post("/loginIfluc", (req, res) => {
         let emailUser = req.query.email;
         let passwordUser = req.query.password;
-        // console.log(req.query)
+        console.log(req.query)
         if (emailUser && passwordUser) {
             Users_ifluc.findOne({where: {email: emailUser}})
                 .then(user => {

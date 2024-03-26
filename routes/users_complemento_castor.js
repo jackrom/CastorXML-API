@@ -1,7 +1,6 @@
 module.exports = app => {
-    const PeriodosTxt = app.db.models.PeriodosTxt
-    const EmpresasTxt = app.db.models.EmpresasTxt
-    const ReportesTxt = app.db.models.ReportesTxt
+    const UsersComplementoCastorfc = app.db.models.UsersComplementoCastorfc
+
     /**
      * @api {get} /users Devuelve los datos de todos los usuarios registrados
      * @apiGroup Users
@@ -43,8 +42,8 @@ module.exports = app => {
      * @apiErrorExample {json} Find error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.get("/periodostxt", (req, res) => {
-        PeriodosTxt.findAll({
+    app.get("/userscomplementocastorfc", (req, res) => {
+        UsersComplementoCastorfc.findAll({
             order: [
                 ['id', 'DESC'],
             ]
@@ -54,97 +53,6 @@ module.exports = app => {
                 res.status(412).json({msg: error.message});
             });
     });
-
-    /**
-     * @api {get} /users Devuelve los datos de todos los usuarios registrados
-     * @apiGroup Users
-     * @apiHeader {String} Token de autorización de usuario autenticado
-     * @apiHeaderExample {json} Header
-     * {"Authorization": "JWT xyz.abc.123.hgf"}
-     * @apiSuccess {Number} id ID del usuario registrado
-     * @apiSuccess {String} nombres Nombres de usuario
-     * @apiSuccess {String} cedula Cédula de Identidad del usuario
-     * @apiSuccess {String} celular Número de teléfono celular del usuario
-     * @apiSuccess {String} direccion Dirección fiscal del usuario para las facturas
-     * @apiSuccess {String} email Correo electrónico del usuario
-     * @apiSuccess {String} password Password del usuario
-     * @apiSuccess {String} avatar Avatar identificativo del usuario
-     * @apiSuccess {String} facebook Si el registro se realizo desde facebook login
-     * @apiSuccess {String} push Código para notificaciones Push
-     * @apiSuccess {String} token Token unico válido para registrar el dispositivo del usuario
-     * @apiSuccess {String} version Version de la app con la cual se regsitra el usuario
-     * @apiSuccess {Date} updatedAt Update's date
-     * @apiSuccess {Date} createdAt Register's date
-     * @apiSuccessExample {json} Success
-     * HTTP/1.1 200 OK
-     * {
-     *    "id": 1,
-     *    "nombres": "raul",
-     *    "cedula": "Raúl Castro",
-     *    "celular": "raul@castro.net",
-     *    "direccion": "123456",
-     *    "email": "raul@hotmail.com",
-     *    "password": "123456789",
-     *    "avatar": "https://goubi.aplios.net/perfil.png",
-     *    "facebook": "0",
-     *    "push": "d75af91d-6454-4a3c-a044-03536bf4b891",
-     *    "token": "d75af91d-6454-4a3c-a044-03536bf4b891",
-     *    "version": "0.0.0"
-     *    "updated_at": "2016-02-10T15:20:11.700Z",
-     *    "created_at": "2016-02-10T15:29:11.700Z",
-     * }
-     * @apiErrorExample {json} Find error
-     * HTTP/1.1 412 Precondition Failed
-     */
-    app.get("/periodostxt/bycompany", (req, res) => {
-        PeriodosTxt.findAll({
-            where: {
-                empresaId: req.query.empresa
-            },
-            order: [
-                ['id', 'DESC'],
-            ]
-        })
-            .then(result => {
-                res.json(result)
-            })
-            .catch(error => {
-                res.status(412).json({msg: error.message});
-            });
-    });
-
-    app.get("/periodostxt/byuser", (req, res) => {
-        PeriodosTxt.findAll({
-            include: [
-                {
-                    model: EmpresasTxt,
-                    as: 'enterprisestxt',
-                }
-            ],
-            where: {
-                userId: req.query.user
-            },
-            order: [
-                ['id', 'DESC'],
-            ]
-        })
-            .then(results => {
-                const queryLower = req.query.q.toLowerCase()
-                let filteredPeriodos = results
-                const totalPage = Math.ceil(filteredPeriodos.length / req.query.perPage) ? Math.ceil(filteredPeriodos.length / req.query.perPage) : 1
-                const totalPeriodos = filteredPeriodos.length
-                if (req.query.perPage) {
-                    const firstIndex = (req.query.currentPage - 1) * req.query.perPage
-                    const lastIndex = req.query.perPage * req.query.currentPage
-                    filteredPeriodos = filteredPeriodos.slice(firstIndex, lastIndex)
-                }
-                res.json({ periodos: results, totalPage, totalPeriodos})
-            })
-            .catch(error => {
-                res.status(412).json({msg: error.message});
-            });
-    });
-
 
     /**
      * @api {get} /users/id Devuelve los datos del usuario autenticado
@@ -188,12 +96,8 @@ module.exports = app => {
      * @apiErrorExample {json} Find error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.get("/periodostxt/:id", (req, res) => {
-        PeriodosTxt.findOne({
-            where: {
-                id: req.params.id
-            }
-        })
+    app.get("/userscomplementocastorfc/:id", (req, res) => {
+        UsersComplementoCastorfc.findOne({where: {id: req.params.id}})
             .then(result => res.json(result))
             .catch(error => {
                 res.status(412).json({msg: error.message});
@@ -212,9 +116,8 @@ module.exports = app => {
      * @apiErrorExample {json} Delete error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.delete("/periodostxt/:id", (req, res) => {
-        ReportesTxt.destroy({where: {periodoId: req.params.id}})
-        PeriodosTxt.destroy({where: {id: req.params.id}})
+    app.delete("/userscomplementocastorfc/:id", (req, res) => {
+        UsersComplementoCastorfc.destroy({where: {id: req.params.id}})
             .then(res => {
                 res.json(result)
             })
@@ -286,8 +189,9 @@ module.exports = app => {
      * @apiErrorExample {json} Register error 30
      * HTTP/1.1 412 Precondition Failed
      */
-    app.post("/periodostxt", (req, res) => {
-        PeriodosTxt.create(req.body.periodo)
+    app.post("/userscomplementocastorfc", (req, res) => {
+        console.log('USER COMPLEMENTO CASTOR ', req.query)
+        UsersComplementoCastorfc.create(req.query)
             .then(result => {
                 res.json(result)
             })
@@ -332,10 +236,17 @@ module.exports = app => {
      * @apiErrorExample {json} Update error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.put("/periodostxt", (req, res) => {
-        PeriodosTxt.update(req.query, {where: {id: req.query.id}})
+    app.put("/userscomplementocastorfc", (req, res) => {
+        console.log('UPDATE LOCATIONS REQUEST', req.body)
+        UsersComplementoCastorfc.update(req.body, {
+            where: {
+                idNet: req.body.obj.id
+            }
+        })
             .then(result => {
+                console.log(result)
                 res.json(result)
+                //res.sendStatus(204)
             })
             .catch(error => {
                 res.status(412).json({msg: error.message});

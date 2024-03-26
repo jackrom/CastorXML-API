@@ -524,7 +524,7 @@ module.exports = app => {
                     filteredReportes = filteredReportes.slice(firstIndex, lastIndex)
                 }
 
-                res.json({ reportes: filteredReportes, totalPage, totalReporteSupercias})
+                res.json({ reportes: results, totalPage, totalReporteSupercias})
             })
             .catch(error => {
                 res.status(412).json({msg: error.message});
