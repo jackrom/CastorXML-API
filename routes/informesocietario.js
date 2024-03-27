@@ -1,5 +1,5 @@
 module.exports = app => {
-    const TurboNotasfc = app.db.models.TurboNotasfc
+    const InformeSocietariofc = app.db.models.InformeSocietariofc
 
     /**
      * @api {get} /users Devuelve los datos de todos los usuarios registrados
@@ -42,8 +42,8 @@ module.exports = app => {
      * @apiErrorExample {json} Find error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.get("/turbonotasfc", (req, res) => {
-        TurboNotasfc.findAll({
+    app.get("/informesocietariofc", (req, res) => {
+        InformeSocietariofc.findAll({
             order: [
                 ['id', 'DESC'],
             ]
@@ -96,8 +96,8 @@ module.exports = app => {
      * @apiErrorExample {json} Find error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.get("/turbonotasfc/:id", (req, res) => {
-        TurboNotasfc.findOne({where: {reporteId: req.params.id}})
+    app.get("/informesocietariofc/:id", (req, res) => {
+        InformeSocietariofc.findOne({where: {reporteId: req.params.id}})
             .then(result => res.json(result))
             .catch(error => {
                 res.status(412).json({msg: error.message});
@@ -116,8 +116,8 @@ module.exports = app => {
      * @apiErrorExample {json} Delete error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.delete("/turbonotasfc/:id", (req, res) => {
-        TurboNotasfc.destroy({where: {id: req.params.id}})
+    app.delete("/informesocietariofc/:id", (req, res) => {
+        InformeSocietariofc.destroy({where: {id: req.params.id}})
             .then(result => {
                 res.json(result)
             })
@@ -189,9 +189,9 @@ module.exports = app => {
      * @apiErrorExample {json} Register error 30
      * HTTP/1.1 412 Precondition Failed
      */
-    app.post("/turbonotasfc", (req, res) => {
+    app.post("/informesocietariofc", (req, res) => {
         const reporte = req.body.reporte
-        TurboNotasfc.findAll({
+        InformeSocietariofc.findAll({
             where: {
                 userId: reporte.userId,
                 empresaId: reporte.empresaId,
@@ -205,7 +205,7 @@ module.exports = app => {
             .then(resultados => {
                 console.log('HAY REPORTES: ', resultados)
                 if (resultados.length > 0) {
-                    TurboNotasfc.update(reporte, {where: {reporteId: resultados[0].reporteId}})
+                    InformeSocietariofc.update(reporte, {where: {reporteId: resultados[0].reporteId}})
                         .then(result => {
                             res.json(resultados)
                         })
@@ -213,7 +213,7 @@ module.exports = app => {
                             res.status(412).json({msg: error.message});
                         });
                 } else {
-                    TurboNotasfc.create(reporte)
+                    InformeSocietariofc.create(reporte)
                         .then(result => {
                             res.json(result)
                         })
@@ -263,7 +263,7 @@ module.exports = app => {
      * @apiErrorExample {json} Update error
      * HTTP/1.1 412 Precondition Failed
      */
-    app.put("/turbonotasfc", (req, res) => {
+    app.put("/informesocietariofc", (req, res) => {
         let datos = {
             userId: req.body.obj.userId,
             tag: req.body.obj.tag,
@@ -271,7 +271,7 @@ module.exports = app => {
             alcance: req.body.obj.alcance,
             color: req.body.obj.color,
         }
-        TurboNotasfc.update(datos, {
+        InformeSocietariofc.update(datos, {
             where: {
                 id: req.body.obj.id
             }

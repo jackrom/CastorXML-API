@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataType) => {
-    const TurboNotasfc = sequelize.define("TurboNotasfc", {
+    const InformeSocietariofc = sequelize.define("InformeSocietariofc", {
         id: {
             type: DataType.INTEGER,
             primaryKey: true,
@@ -21,83 +21,55 @@ module.exports = (sequelize, DataType) => {
             type: DataType.INTEGER,
             allowNull: true
         },
-        nombre: {
+        lugaryfechaaprobaciongerente: {
             type: DataType.STRING,
             allowNull: true
         },
-        ruc: {
+        lugaryfechaaprobacioncomisario: {
             type: DataType.STRING,
             allowNull: true
         },
-        pais: {
+        lugaryfechaaprobacionacta: {
             type: DataType.STRING,
             allowNull: true
         },
-        domicilio: {
+        horaaprobacionacta: {
             type: DataType.STRING,
             allowNull: true
         },
-        formaLegal: {
+        nombreapellidoscomisario: {
             type: DataType.STRING,
             allowNull: true
         },
-        representanteLegal: {
+        nombreapellidosgerente: {
             type: DataType.STRING,
             allowNull: true
         },
-        descripcionEmpresa: {
-            type: DataType.TEXT,
-            allowNull: true
-        },
-        descripcionRepresentanteLegal: {
-            type: DataType.TEXT,
-            allowNull: true
-        },
-        estructuraOrganizacional: {
-            type: DataType.TEXT,
-            allowNull: true
-        },
-        fechaJunta: {
-            type: DataType.DATE,
-            allowNull: true
-        },
-        tasaimpuesto: {
+        nombreapellidospresidente: {
             type: DataType.STRING,
             allowNull: true
         },
-        lineanegocio: {
+        nombreapellidossecretario: {
+            type: DataType.STRING,
+            allowNull: true
+        },
+        direccion: {
+            type: DataType.STRING,
+            allowNull: true
+        },
+        md_informe_gerente: {
             type: DataType.TEXT,
             allowNull: true
         },
-        accionistas: {
+        md_informe_comisario: {
             type: DataType.TEXT,
             allowNull: true
         },
-        periodoactual: {
-            type: DataType.INTEGER,
-            allowNull: true
-        },
-        periodoanterior: {
-            type: DataType.INTEGER,
-            allowNull: true
-        },
-        md_policies_accounting: {
-            type: DataType.TEXT,
-            allowNull: true
-        },
-        md_gestion_riesgos: {
-            type: DataType.TEXT,
-            allowNull: true
-        },
-        md_estimaciones_juicios_administracion: {
-            type: DataType.TEXT,
-            allowNull: true
-        },
-        md_sanciones: {
+        md_acta_junta_general: {
             type: DataType.TEXT,
             allowNull: true
         },
     })
 
-    return TurboNotasfc
+    return InformeSocietariofc
 };

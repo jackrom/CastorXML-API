@@ -77,6 +77,7 @@ module.exports = app => {
     const OtrosAntIfluc = app.db.models.OtrosAntIfluc
 
     const TurboNotasfc = app.db.models.TurboNotasfc
+    const InformeSocietariofc = app.db.models.InformeSocietariofc
 
 
     /**
@@ -676,6 +677,10 @@ module.exports = app => {
                 {
                     model: TurboNotasfc,
                     as: 'reporteTurboNotas',
+                },
+                {
+                    model: InformeSocietariofc,
+                    as: 'reporteInformeSocietario',
                 },
             ],
             where: {

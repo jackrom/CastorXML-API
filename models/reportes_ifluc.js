@@ -331,6 +331,10 @@ module.exports = (sequelize, DataType) => {
             foreignKey: 'reporteId',
             as: 'reporteTurboNotas'
         });
+        ReportesIfluc.hasMany(models.InformeSocietariofc, {
+            foreignKey: 'reporteId',
+            as: 'reporteInformeSocietario'
+        });
     };
 
     return ReportesIfluc;
