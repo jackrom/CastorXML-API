@@ -65,7 +65,15 @@ module.exports = (sequelize, DataType) => {
             type: DataType.TEXT,
             allowNull: true
         },
-        md_acta_junta_general: {
+        md_acta_junta_general_bloque1: {
+            type: DataType.TEXT,
+            allowNull: true
+        },
+        md_acta_junta_general_bloque2: {
+            type: DataType.TEXT,
+            allowNull: true
+        },
+        md_acta_junta_general_bloque3: {
             type: DataType.TEXT,
             allowNull: true
         },
