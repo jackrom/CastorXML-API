@@ -65,6 +65,10 @@ module.exports = (sequelize, DataType) => {
             type: DataType.TEXT,
             allowNull: true
         },
+        md_orden_del_dia: {
+            type: DataType.TEXT,
+            allowNull: true
+        },
         md_acta_junta_general_bloque1: {
             type: DataType.TEXT,
             allowNull: true
