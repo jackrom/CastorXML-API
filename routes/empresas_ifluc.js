@@ -174,6 +174,7 @@ module.exports = app => {
             ]
         })
             .then(results => {
+                console.log(results)
                 // const { q = '', role = null, plan = null, status = null, perPage = 10, currentPage = 1 } = req.query.params ?? {}
                 const queryLower = req.query.q.toLowerCase()
                 let filteredEmpresas = results.filter(

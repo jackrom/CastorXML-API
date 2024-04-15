@@ -217,7 +217,7 @@ module.exports = app => {
         ReportesIfluc.destroy({where: {periodoId: req.params.id}})
         PeriodosIfluc.destroy({where: {id: req.params.id}})
             .then(res => {
-                res.json(result)
+                res.json(res)
             })
             .catch(error => {
                 res.json({msg: error.message})
